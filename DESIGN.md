@@ -26,7 +26,9 @@ even when you forget to open it.
 
 **Non-Goals (v1)**
 - No multi-user / family / sharing features. Strictly personal.
-- No full history / analytics dashboards (only the **last 3 completions** are retained per item).
+- **Habits keep their full daily check history** so the user can see a calendar of stamps —
+  the "traces of time" (歲月的痕跡). **Chores** stay lightweight (only the **last 3
+  completions** retained). No heavy analytics/reporting dashboards beyond the habit calendar.
 - No social feed, no marketplace, no real-money purchases.
 
 ## 3. Target User & Context
@@ -50,7 +52,8 @@ check-ins, plus occasional setup/editing.
 ---
 
 ## 5. Feature Set (overview)
-1. **Habit tracking** — create/edit/delete habits, daily check-off, streak & totals.
+1. **Habit tracking** — create/edit/delete habits, daily check-off, streak & totals, plus a
+   **completion calendar** (stamps on every day done — see your history grow over time).
 2. **Chore management** — create/edit/delete recurring chores, mark done, auto-reschedule, overdue tracking.
 3. **Gamification** — XP/levels, coins, avatar growth, hair-growth & room-mess decay,
    achievements, daily/weekly quests, on-time bonuses.
@@ -64,7 +67,8 @@ check-ins, plus occasional setup/editing.
 ### 6.1 Habits
 **Fields:** name (required), emoji/icon, color, schedule (`days_of_week`; empty = every
 day), optional reminder time, active flag, sort order. **Derived/maintained:** current
-streak, longest streak, total completions, last completed date, last 3 completion timestamps.
+streak, longest streak, total completions, last completed date, and the **full
+completion-date history** (one record per completed day, powering the calendar view).
 
 - **Create** — Form: name, emoji picker, color, schedule selector (Everyday / pick weekdays),
   optional reminder time. Saving the very first habit unlocks the `first_habit` achievement.
@@ -72,11 +76,13 @@ streak, longest streak, total completions, last completed date, last 3 completio
   - *List view* (Habits tab): all habits with icon, name, schedule summary, current streak,
     total completions.
   - *Today view*: only habits scheduled for the selected day, each with a check control and streak badge.
-  - *Detail*: full config + the **last 3 completion times**.
+  - *Detail*: full config + the **completion calendar** — a stamp on every day the habit was
+    done, so the user literally watches their consistency accumulate over weeks/months
+    (the "traces of time"). Plus current/longest streak and totals.
 - **Update** — Same form as create, pre-filled; any field editable.
 - **Delete** — With confirm; removes the habit and its completion records.
 - **Check / Uncheck (for a given day)** — Tapping the check toggles completion for that date:
-  - On check: record completion, prune to last 3, increment total, update streak
+  - On check: record completion (kept permanently), increment total, update streak
     (consecutive scheduled day → +1, otherwise reset to 1), update longest streak, award XP,
     advance relevant quests, evaluate achievements, recompute level. Trim avatar hair slightly.
   - On uncheck (same day): reverse the above (simplified rollback in v1).
@@ -177,7 +183,9 @@ The emotional + functional hub.
 
 ### 8.4 Habits
 - List of all habits (icon, name, schedule, streak, totals). FAB to add.
-- Tap → detail (config + last 3 completions) with edit/delete. Add/edit form (§6.1).
+- Tap → detail with edit/delete. Add/edit form (§6.1). Detail centers on the **completion
+  calendar** (see §9.1): a stamped calendar/heatmap of every day the habit was done, plus
+  streak and totals.
 
 ### 8.5 Chores
 - List of all chores (icon, name, cadence, next due, overdue highlight). FAB to add.
@@ -199,6 +207,18 @@ The emotional + functional hub.
 ---
 
 ## 9. Visual & Character Design Direction
+
+### 9.1 Habit Completion Calendar ("traces of time")
+The signature view of a habit's history. Two complementary layouts:
+- **Monthly calendar** — a familiar month grid where each completed day carries a **stamp**
+  (the habit's emoji/color, like ink pressed onto the date). Scheduled-but-missed days read
+  faintly; off-schedule days are neutral. The user flips back through months to relive the journey.
+- **Year heatmap** (compact) — a GitHub-style contribution grid for the long view; intensity
+  reflects activity, letting months of consistency become a single satisfying picture.
+Design goal: make accumulated effort feel **tangible and earned** — patina, not just data.
+Streak and totals sit alongside as headline numbers.
+
+### 9.2 General
 - **Tone:** warm, friendly, cozy; gently encouraging (never punishing). Rounded shapes,
   soft shadows, playful but legible.
 - **Avatar:** a simple stylized character buildable from layered parts; the **hair layer**
@@ -229,15 +249,17 @@ Single-user; every row scoped to the authenticated user.
 - **profile** — display name, timezone, daily-reminder settings, level, xp, coins,
   hair_length, room_cleanliness, last_sync_date.
 - **habit** — config + current_streak, longest_streak, total_completions, last_completed_date.
-- **habit_completion** — keep only the **last 3** per habit (date + timestamp).
+- **habit_completion** — **full history**: one row per completed day (date + timestamp),
+  powering the calendar/heatmap. Never pruned.
 - **chore** — config (frequency/interval/weekdays/day-of-month/start_date) + total_completions, last_completed_date.
 - **chore_completion** — keep only the **last 3** per chore (due date + timestamp).
 - **achievement_def** (catalog) + **user_achievement** (unlocked).
 - **user_quest** — period (daily/weekly), key, title, target, progress, rewards, completed.
 - **push_subscription**, **notification_log** (de-dup).
 
-> Streaks/decay are maintained via counters on the row rather than full history (only last 3
-> completions retained). This trades exactness for simplicity per the "don't keep full history" goal.
+> Habits retain full completion history (cheap for a single user) so streaks can be computed
+> exactly and the calendar/heatmap is fully accurate. Chores keep only the last 3 completions;
+> their counters are maintained on the row.
 
 ---
 
