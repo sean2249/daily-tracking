@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#d96f47" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Pixie" />
+<title>Pixie — Daily Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=DotGothic16&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    /* warm cozy 16-bit palette */
+    --bg:          #f0e2c0;  /* parchment */
+    --bg-deep:     #e6d4a8;
+    --ink:         #2a1d12;  /* near-black brown */
+    --ink-soft:    #5d4632;
+    --paper:       #fbf3df;
+    --paper-deep:  #f5e9c8;
+
+    --accent:      #d96f47;  /* terracotta */
+    --accent-2:    #c95a32;
+    --gold:        #e5a93a;  /* coin yellow */
+    --leaf:        #6a9c4a;  /* plant green */
+    --leaf-dark:   #3a6b2a;
+    --sky:         #88c4d9;
+    --rose:        #d97a8f;
+    --lilac:       #9989c5;
+
+    --hair:        #5c3a1e;
+    --skin:        #f4c2a1;
+    --skin-shade:  #d99c79;
+    --shirt:       #5d8aa8;
+    --shirt-shade: #3e6580;
+
+    --wall:        #f4dca0;
+    --wall-shade:  #d9b873;
+    --floor:       #b87a48;
+    --floor-dark:  #8b5a30;
+    --bed:         #c95a55;
+    --bed-shade:   #9a3e3a;
+    --sheet:       #fbf3df;
+
+    --line:        #c9b683;
+    --line-strong: #8b6f3a;
+
+    /* type */
+    --font-display: 'Silkscreen', 'Pixelify Sans', monospace;
+    --font-body:    'Pixelify Sans', 'DotGothic16', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: #cdbf99;
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background:
+      radial-gradient(1200px 800px at 50% -10%, #e6d6ad 0%, transparent 60%),
+      repeating-linear-gradient(45deg, #c9bb95 0 12px, #cdbf99 12px 24px);
+  }
+  * { box-sizing: border-box; }
+
+  /* hide scrollbars (mobile-style) */
+  ::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
+  * { scrollbar-width: none; }
+  svg.pixel { shape-rendering: crispEdges; image-rendering: pixelated; display: block; }
+  img.pixel { image-rendering: pixelated; }
+
+  /* faux-pixel button: chunky border, no border-radius */
+  .px-btn {
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #fff;
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: transform 0.04s, box-shadow 0.04s;
+  }
+  .px-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .px-btn.ghost { background: var(--paper); color: var(--ink); }
+  .px-btn.gold  { background: var(--gold);   color: var(--ink); }
+
+  /* pixel card */
+  .px-card {
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .px-card.soft { box-shadow: 3px 3px 0 var(--line-strong); }
+
+  /* scanline overlay (subtle) */
+  .scanlines::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.06) 0,
+      rgba(0,0,0,0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    opacity: 0.35;
+  }
+
+  /* keyframes */
+  @keyframes pop-in {
+    0%   { transform: scale(0.5); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  @keyframes sparkle {
+    0%   { transform: scale(0) rotate(0deg);    opacity: 0; }
+    40%  { transform: scale(1.2) rotate(45deg); opacity: 1; }
+    100% { transform: scale(0) rotate(90deg);   opacity: 0; }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-2px); }
+    40%      { transform: translateX( 3px); }
+    60%      { transform: translateX(-3px); }
+    80%      { transform: translateX( 2px); }
+  }
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    96%           { transform: scaleY(0.1); }
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translateY(-30px) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(900px) rotate(720deg); opacity: 0.2; }
+  }
+  @keyframes drop-in {
+    0%   { transform: translateY(-20px) scale(0.92); opacity: 0; }
+    100% { transform: translateY(0)     scale(1);    opacity: 1; }
+  }
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(229,169,58,0); }
+    50%      { box-shadow: 0 0 18px rgba(229,169,58,0.8); }
+  }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="module" src="/src/main.jsx"></script>
+
+</body>
+</html>
