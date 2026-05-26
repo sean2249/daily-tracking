@@ -3,6 +3,7 @@
 import React from 'react';
 import { Avatar, Room } from './pixel.jsx';
 import { parseISO, addDays, isoDate } from './data.jsx';
+import { pushSupported, pushPermission, enablePush, disablePush } from './lib/push.js';
 
 // Backdrop with pixel feel
 function ModalBackdrop({ children, onClose }) {
@@ -289,11 +290,11 @@ function AddItemModal({ kind, onClose, onSave }) {
             fontSize: 13, color: '#fff',
             letterSpacing: '0.06em',
           }}>NEW {isHabit ? 'HABIT' : 'CHORE'}</div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close dialog" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)',
             fontSize: 13,
-          }}>✕</button>
+          }}><span aria-hidden="true">✕</span></button>
         </div>
 
         <div style={{
@@ -646,10 +647,10 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
             fontFamily: 'var(--font-display)',
             fontSize: 13, color: '#fff', letterSpacing: '0.06em',
           }}>EDIT COMPLETION</div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close dialog" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
-          }}>✕</button>
+          }}><span aria-hidden="true">✕</span></button>
         </div>
 
         <div style={{ padding: 16 }}>
@@ -805,9 +806,126 @@ function UndoToast({ toast, onUndo, onDismiss }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// SETTINGS — display name, daily reminder, push notifications
+// ─────────────────────────────────────────────────────────────
+function PixToggle({ on, onClick, label }) {
+  return (
+    <button onClick={onClick} aria-pressed={on} aria-label={label} style={{
+      width: 52, height: 28, padding: 3,
+      background: on ? 'var(--leaf, #6a9c4a)' : 'var(--paper-deep)',
+      border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
+      cursor: 'pointer', display: 'flex', alignItems: 'center',
+      justifyContent: on ? 'flex-end' : 'flex-start',
+    }}>
+      <span aria-hidden="true" style={{ width: 18, height: 18, background: 'var(--ink)' }} />
+    </button>
+  );
+}
+
+function SettingsModal({ profile, onClose, onSave }) {
+  const [name, setName] = React.useState(profile.name || '');
+  const [remOn, setRemOn] = React.useState(!!profile.reminderEnabled);
+  const [remTime, setRemTime] = React.useState((profile.reminderTime || '07:00').slice(0, 5));
+  const [pushOn, setPushOn] = React.useState(!!profile.pushEnabled);
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+
+  const supported = pushSupported();
+  const perm = supported ? pushPermission() : 'unsupported';
+  const initialPush = !!profile.pushEnabled;
+
+  // Everything (including push) is deferred to SAVE: toggling push only flips
+  // local state, and the browser subscribe/unsubscribe runs here. That way
+  // CANCEL truly cancels and never leaves a dangling server-side subscription.
+  const handleSave = async () => {
+    setBusy(true); setMsg('');
+    try {
+      if (pushOn !== initialPush) {
+        const r = pushOn ? await enablePush() : await disablePush();
+        if (!r.ok) {
+          setMsg(r.reason || (pushOn ? 'Could not enable notifications.' : 'Could not disable notifications.'));
+          setBusy(false);
+          return;
+        }
+      }
+      onSave({
+        displayName: name.trim() || 'You',
+        reminderEnabled: remOn,
+        reminderTime: remTime,
+        pushEnabled: pushOn,
+      });
+    } catch (e) {
+      setMsg(e?.message || String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div style={{
+        width: 340, maxWidth: '100%',
+        background: 'var(--bg)', border: '3px solid var(--ink)', boxShadow: '6px 6px 0 var(--ink)',
+      }}>
+        <div style={{
+          padding: '10px 14px', background: 'var(--accent)', borderBottom: '3px solid var(--ink)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#fff', letterSpacing: '0.06em' }}>SETTINGS</div>
+          <button onClick={onClose} aria-label="Close settings" style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
+          }}><span aria-hidden="true">✕</span></button>
+        </div>
+
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 560, overflowY: 'auto' }}>
+          <PixField label="Display name" value={name} onChange={setName} placeholder="You" />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)' }}>DAILY REMINDER</div>
+            <PixToggle on={remOn} onClick={() => setRemOn(v => !v)} label="Daily reminder" />
+          </div>
+          {remOn && <PixField label="Reminder time" type="time" value={remTime} onChange={setRemTime} />}
+
+          <div style={{ borderTop: '2px dashed var(--line-strong)', paddingTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)' }}>PUSH NOTIFICATIONS</div>
+              {supported && <PixToggle on={pushOn} onClick={() => setPushOn(v => !v)} label="Push notifications" />}
+            </div>
+            {!supported ? (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.4, marginTop: 8 }}>
+                Not supported in this browser. On iPhone, add Pixie to your Home Screen first (iOS 16.4+), then reopen and try again.
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>
+                  Applies when you tap SAVE; you'll be asked to allow notifications.
+                </div>
+                {perm === 'denied' && pushOn && (
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--accent)', marginTop: 6, lineHeight: 1.4 }}>
+                    Notifications are blocked in your browser settings — allow them for this site, then save.
+                  </div>
+                )}
+              </>
+            )}
+            {msg && <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>{msg}</div>}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button className="px-btn ghost" disabled={busy} onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
+            <button className="px-btn" disabled={busy} style={{ flex: 2, fontSize: 12 }} onClick={handleSave}>
+              {busy ? '…' : 'SAVE'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </ModalBackdrop>
+  );
+}
+
 export {
   OnboardingScreen,
   ModalBackdrop, PixField,
   AddItemModal, AchievementModal, LevelUpModal, PerfectDayModal,
-  EditCompletionModal, UndoToast,
+  EditCompletionModal, UndoToast, SettingsModal,
 };

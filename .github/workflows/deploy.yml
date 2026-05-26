@@ -28,6 +28,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Optional overrides; fall back to the public defaults in src/lib/config.js when unset.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
       - uses: actions/configure-pages@v5
         with:
           # Create/enable the Pages site from the workflow on first run, so a
@@ -39,6 +44,9 @@ jobs:
 
   deploy:
     needs: build
+    # Only the default branch deploys to the single Pages environment; other
+    # branches just run `build` above as a check.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

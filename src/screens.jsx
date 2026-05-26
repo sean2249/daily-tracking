@@ -9,7 +9,7 @@ import {
   parseISO, dayDiff, TODAY_ISO, addDays, isoDate,
   cadenceSummary, scheduleSummary, chorelDueText, xpForLevel, fmtMonthDay,
 } from './data.jsx';
-import { EditCompletionModal } from './modals.jsx';
+import { EditCompletionModal, SettingsModal } from './modals.jsx';
 
 const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const dayNamesFull = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1058,6 +1058,7 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
   const xpToNext = xpForLevel(profile.level + 1);
   const xpAtLevel = xpForLevel(profile.level);
   const unlocked = achievements.filter(a => a.unlocked);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1171,22 +1172,32 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
         <SectionHeader>Settings</SectionHeader>
         <div style={{ padding: '0 16px 24px' }}>
           {[
-            { label: 'DAILY REMINDER', value: profile.reminderEnabled ? `${profile.reminderTime}` : 'Off' },
-            { label: 'PUSH ENABLED',   value: profile.pushEnabled ? 'Yes' : 'Tap to enable' },
-            { label: 'TIMEZONE',       value: profile.timezone },
-            { label: 'DISPLAY NAME',   value: profile.name },
+            { label: 'DAILY REMINDER', value: profile.reminderEnabled ? (profile.reminderTime || '').slice(0, 5) : 'Off', edit: true },
+            { label: 'PUSH ENABLED',   value: profile.pushEnabled ? 'On' : 'Tap to enable', edit: true },
+            { label: 'TIMEZONE',       value: profile.timezone, edit: false },
+            { label: 'DISPLAY NAME',   value: profile.name, edit: true },
           ].map((s, i) => (
-            <div key={i} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '10px 12px', marginBottom: 6,
-              background: 'var(--paper)',
-              border: '2px solid var(--ink)',
-              boxShadow: '2px 2px 0 var(--ink)',
-              fontFamily: 'var(--font-mono)', fontSize: 12,
-              color: 'var(--ink)',
-            }}>
+            <div key={i}
+              onClick={s.edit ? () => setSettingsOpen(true) : undefined}
+              role={s.edit ? 'button' : undefined}
+              tabIndex={s.edit ? 0 : undefined}
+              onKeyDown={s.edit ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSettingsOpen(true); }
+              } : undefined}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 12px', marginBottom: 6,
+                background: 'var(--paper)',
+                border: '2px solid var(--ink)',
+                boxShadow: '2px 2px 0 var(--ink)',
+                fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--ink)',
+                cursor: s.edit ? 'pointer' : 'default',
+              }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, letterSpacing: '0.06em' }}>{s.label}</span>
-              <span>{s.value}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {s.value}{s.edit && <span style={{ color: 'var(--ink-soft)' }}>›</span>}
+              </span>
             </div>
           ))}
           <button className="px-btn ghost" style={{ width: '100%', marginTop: 8 }} onClick={onSignOut}>SIGN OUT</button>
@@ -1200,6 +1211,14 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
           </div>
         </div>
       </ScreenScroll>
+
+      {settingsOpen && (
+        <SettingsModal
+          profile={profile}
+          onClose={() => setSettingsOpen(false)}
+          onSave={(patch) => { dispatch({ type: 'SAVE_SETTINGS', patch }); setSettingsOpen(false); }}
+        />
+      )}
     </div>
   );
 }
