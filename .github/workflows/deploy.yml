@@ -39,6 +39,9 @@ jobs:
 
   deploy:
     needs: build
+    # Only the default branch deploys to the single Pages environment; other
+    # branches just run `build` above as a check.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
