@@ -1179,6 +1179,11 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
           ].map((s, i) => (
             <div key={i}
               onClick={s.edit ? () => setSettingsOpen(true) : undefined}
+              role={s.edit ? 'button' : undefined}
+              tabIndex={s.edit ? 0 : undefined}
+              onKeyDown={s.edit ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSettingsOpen(true); }
+              } : undefined}
               style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 12px', marginBottom: 6,

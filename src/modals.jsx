@@ -290,11 +290,11 @@ function AddItemModal({ kind, onClose, onSave }) {
             fontSize: 13, color: '#fff',
             letterSpacing: '0.06em',
           }}>NEW {isHabit ? 'HABIT' : 'CHORE'}</div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close dialog" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)',
             fontSize: 13,
-          }}>✕</button>
+          }}><span aria-hidden="true">✕</span></button>
         </div>
 
         <div style={{
@@ -647,10 +647,10 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
             fontFamily: 'var(--font-display)',
             fontSize: 13, color: '#fff', letterSpacing: '0.06em',
           }}>EDIT COMPLETION</div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close dialog" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
-          }}>✕</button>
+          }}><span aria-hidden="true">✕</span></button>
         </div>
 
         <div style={{ padding: 16 }}>
@@ -809,16 +809,16 @@ function UndoToast({ toast, onUndo, onDismiss }) {
 // ─────────────────────────────────────────────────────────────
 // SETTINGS — display name, daily reminder, push notifications
 // ─────────────────────────────────────────────────────────────
-function PixToggle({ on, onClick }) {
+function PixToggle({ on, onClick, label }) {
   return (
-    <button onClick={onClick} aria-pressed={on} style={{
+    <button onClick={onClick} aria-pressed={on} aria-label={label} style={{
       width: 52, height: 28, padding: 3,
       background: on ? 'var(--leaf, #6a9c4a)' : 'var(--paper-deep)',
       border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
       cursor: 'pointer', display: 'flex', alignItems: 'center',
       justifyContent: on ? 'flex-end' : 'flex-start',
     }}>
-      <span style={{ width: 18, height: 18, background: 'var(--ink)' }} />
+      <span aria-hidden="true" style={{ width: 18, height: 18, background: 'var(--ink)' }} />
     </button>
   );
 }
@@ -863,10 +863,10 @@ function SettingsModal({ profile, onClose, onSave, onPushChange }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#fff', letterSpacing: '0.06em' }}>SETTINGS</div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close settings" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
-          }}>✕</button>
+          }}><span aria-hidden="true">✕</span></button>
         </div>
 
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 560, overflowY: 'auto' }}>
@@ -874,7 +874,7 @@ function SettingsModal({ profile, onClose, onSave, onPushChange }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)' }}>DAILY REMINDER</div>
-            <PixToggle on={remOn} onClick={() => setRemOn(v => !v)} />
+            <PixToggle on={remOn} onClick={() => setRemOn(v => !v)} label="Daily reminder" />
           </div>
           {remOn && <PixField label="Reminder time" type="time" value={remTime} onChange={setRemTime} />}
 

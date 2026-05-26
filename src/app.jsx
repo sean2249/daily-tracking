@@ -104,6 +104,15 @@ function App() {
     if (confetti) { const t = setTimeout(() => setConfetti(false), 2800); return () => clearTimeout(t); }
   }, [confetti]);
 
+  // Reconcile detail selections when the underlying item disappears (e.g. after a
+  // delete or a reload). Done in an effect rather than during render to avoid
+  // setState-while-rendering warnings and render loops.
+  React.useEffect(() => {
+    if (!data) return;
+    if (habitDetailId && !data.habits.some(h => h.id === habitDetailId)) setHabitDetailId(null);
+    if (choreDetailId && !data.chores.some(c => c.id === choreDetailId)) setChoreDetailId(null);
+  }, [data, habitDetailId, choreDetailId]);
+
   const applyResult = (res) => {
     if (res && res.state) setData(res.state);
     if (res && res.leveledUp) setPendingLevelUp(res.leveledUp);
@@ -157,7 +166,7 @@ function App() {
     if (tab === 'habits') {
       if (habitDetailId) {
         const h = screenState.habits.find(x => x.id === habitDetailId);
-        if (!h) { setHabitDetailId(null); return null; }
+        if (!h) return null; // effect above clears the stale id
         return <HabitDetailScreen habit={h} state={screenState} dispatch={dispatch}
           onBack={() => setHabitDetailId(null)} onEdit={() => {}} />;
       }
@@ -167,7 +176,7 @@ function App() {
     if (tab === 'chores') {
       if (choreDetailId) {
         const c = screenState.chores.find(x => x.id === choreDetailId);
-        if (!c) { setChoreDetailId(null); return null; }
+        if (!c) return null; // effect above clears the stale id
         return <ChoreDetailScreen chore={c} state={screenState} dispatch={dispatch}
           onBack={() => setChoreDetailId(null)} onEdit={() => {}} />;
       }

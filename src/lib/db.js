@@ -8,6 +8,13 @@ const todayISO = () => isoDate(new Date());
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const round1 = (n) => Math.round(n * 10) / 10;
 
+// Throw on Supabase errors so the caller (App) can surface a real message,
+// instead of letting an undefined `data` blow up later with a confusing error.
+function ok({ data, error }) {
+  if (error) throw error;
+  return data;
+}
+
 // chore row -> the shape nextDueFor() expects
 function choreShape(c) {
   return { frequency: c.frequency, interval: c.interval_n, weekdays: c.weekdays || [], dayOfMonth: c.day_of_month };
@@ -157,15 +164,15 @@ async function unlockAchievements(checks) {
   if (checks.perfectDay) met.push('perfect_day');
   if (met.length === 0) return [];
 
-  const { data: existing } = await supabase
-    .from('dt_user_achievements').select('achievement_key').in('achievement_key', met);
-  const have = new Set((existing || []).map(r => r.achievement_key));
+  const existing = ok(await supabase
+    .from('dt_user_achievements').select('achievement_key').in('achievement_key', met));
+  const have = new Set(existing.map(r => r.achievement_key));
   const toAdd = met.filter(k => !have.has(k));
   if (toAdd.length === 0) return [];
 
-  await supabase.from('dt_user_achievements').insert(toAdd.map(k => ({ achievement_key: k })));
-  const { data: defs } = await supabase.from('dt_achievement_defs').select('*').in('key', toAdd);
-  return (defs || []).map(d => ({ id: d.key, title: d.title, desc: d.description, emoji: d.emoji }));
+  ok(await supabase.from('dt_user_achievements').insert(toAdd.map(k => ({ achievement_key: k }))));
+  const defs = ok(await supabase.from('dt_achievement_defs').select('*').in('key', toAdd));
+  return defs.map(d => ({ id: d.key, title: d.title, desc: d.description, emoji: d.emoji }));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -173,73 +180,75 @@ async function unlockAchievements(checks) {
 // ─────────────────────────────────────────────────────────────
 export async function toggleHabit(habitId, dateISO) {
   const date = dateISO || todayISO();
-  const { data: habit } = await supabase.from('dt_habits').select('*').eq('id', habitId).single();
-  const { data: existing } = await supabase
-    .from('dt_habit_completions').select('id').eq('habit_id', habitId).eq('completed_date', date).maybeSingle();
-  const { data: prof } = await supabase.from('dt_profiles').select('*').single();
+  const user = await currentUser();
+  const habit = ok(await supabase.from('dt_habits').select('*').eq('id', habitId).single());
+  const existing = ok(await supabase
+    .from('dt_habit_completions').select('id').eq('habit_id', habitId).eq('completed_date', date).maybeSingle());
+  const prof = await ensureProfile(user);
 
   let leveledUp = null;
   let newAchievements = [];
 
   if (existing) {
-    await supabase.from('dt_habit_completions').delete().eq('id', existing.id);
+    ok(await supabase.from('dt_habit_completions').delete().eq('id', existing.id));
     const streak = Math.max(0, habit.streak - 1);
     const total = Math.max(0, habit.total_completions - 1);
-    await supabase.from('dt_habits').update({ streak, total_completions: total }).eq('id', habitId);
+    ok(await supabase.from('dt_habits').update({ streak, total_completions: total }).eq('id', habitId));
     const xp = Math.max(0, prof.xp - 10);
-    await supabase.from('dt_profiles').update({
+    ok(await supabase.from('dt_profiles').update({
       xp, level: levelFromXP(xp), hair_tier: round1(clamp(Number(prof.hair_tier) + 0.34, 0, 3)),
-    }).eq('user_id', prof.user_id);
+    }).eq('user_id', user.id));
   } else {
-    await supabase.from('dt_habit_completions').insert({ habit_id: habitId, completed_date: date });
+    ok(await supabase.from('dt_habit_completions').insert({ habit_id: habitId, completed_date: date }));
     const streak = habit.streak + 1;
     const longest = Math.max(habit.longest_streak, streak);
     const total = habit.total_completions + 1;
-    await supabase.from('dt_habits').update({
+    ok(await supabase.from('dt_habits').update({
       streak, longest_streak: longest, total_completions: total, last_completed_date: date,
-    }).eq('id', habitId);
+    }).eq('id', habitId));
     const xp = prof.xp + 10;
     const level = levelFromXP(xp);
     if (level > prof.level) leveledUp = level;
-    await supabase.from('dt_profiles').update({
+    ok(await supabase.from('dt_profiles').update({
       xp, level, hair_tier: round1(clamp(Number(prof.hair_tier) - 0.5, 0, 3)),
-    }).eq('user_id', prof.user_id);
+    }).eq('user_id', user.id));
     newAchievements = await unlockAchievements({ streak, habitTotal: total, level });
   }
   return { state: await getState(), leveledUp, newAchievements };
 }
 
 async function pruneChoreCompletions(choreId) {
-  const { data: rows } = await supabase
-    .from('dt_chore_completions').select('id, due_date').eq('chore_id', choreId).order('due_date', { ascending: false });
-  const extra = (rows || []).slice(3).map(r => r.id);
-  if (extra.length) await supabase.from('dt_chore_completions').delete().in('id', extra);
+  const rows = ok(await supabase
+    .from('dt_chore_completions').select('id, due_date').eq('chore_id', choreId).order('due_date', { ascending: false }));
+  const extra = rows.slice(3).map(r => r.id);
+  if (extra.length) ok(await supabase.from('dt_chore_completions').delete().in('id', extra));
 }
 
 export async function completeChore(choreId) {
   const date = todayISO();
-  const { data: chore } = await supabase.from('dt_chores').select('*').eq('id', choreId).single();
-  const { data: existsToday } = await supabase
-    .from('dt_chore_completions').select('id').eq('chore_id', choreId).eq('due_date', date).maybeSingle();
+  const user = await currentUser();
+  const chore = ok(await supabase.from('dt_chores').select('*').eq('id', choreId).single());
+  const existsToday = ok(await supabase
+    .from('dt_chore_completions').select('id').eq('chore_id', choreId).eq('due_date', date).maybeSingle());
   if (existsToday) return { state: await getState() };
 
   const overdue = chore.next_due ? dayDiff(parseISO(chore.next_due), new Date()) < 0 : false;
 
-  await supabase.from('dt_chore_completions').insert({ chore_id: choreId, due_date: date });
+  ok(await supabase.from('dt_chore_completions').insert({ chore_id: choreId, due_date: date }));
   await pruneChoreCompletions(choreId);
 
   const total = chore.total_completions + 1;
-  await supabase.from('dt_chores').update({
+  ok(await supabase.from('dt_chores').update({
     total_completions: total, last_completed_date: date, next_due: nextDueFor(choreShape(chore), new Date()),
-  }).eq('id', choreId);
+  }).eq('id', choreId));
 
-  const { data: prof } = await supabase.from('dt_profiles').select('*').single();
+  const prof = await ensureProfile(user);
   const xp = prof.xp + (overdue ? 22 : 15);
   const level = levelFromXP(xp);
   const leveledUp = level > prof.level ? level : null;
-  await supabase.from('dt_profiles').update({
+  ok(await supabase.from('dt_profiles').update({
     xp, level, coins: prof.coins + 3, mess_tier: round1(clamp(Number(prof.mess_tier) - 0.6, 0, 3)),
-  }).eq('user_id', prof.user_id);
+  }).eq('user_id', user.id));
 
   const newAchievements = await unlockAchievements({ choreTotal: total, level });
   return { state: await getState(), leveledUp, newAchievements, undo: { id: choreId, label: chore.name } };
@@ -247,48 +256,49 @@ export async function completeChore(choreId) {
 
 export async function undoChore(choreId) {
   const date = todayISO();
-  const { data: existsToday } = await supabase
-    .from('dt_chore_completions').select('id').eq('chore_id', choreId).eq('due_date', date).maybeSingle();
+  const user = await currentUser();
+  const existsToday = ok(await supabase
+    .from('dt_chore_completions').select('id').eq('chore_id', choreId).eq('due_date', date).maybeSingle());
   if (!existsToday) return { state: await getState() };
 
-  await supabase.from('dt_chore_completions').delete().eq('id', existsToday.id);
-  const { data: chore } = await supabase.from('dt_chores').select('*').eq('id', choreId).single();
-  const { data: comps } = await supabase
-    .from('dt_chore_completions').select('due_date').eq('chore_id', choreId).order('due_date', { ascending: false });
+  ok(await supabase.from('dt_chore_completions').delete().eq('id', existsToday.id));
+  const chore = ok(await supabase.from('dt_chores').select('*').eq('id', choreId).single());
+  const comps = ok(await supabase
+    .from('dt_chore_completions').select('due_date').eq('chore_id', choreId).order('due_date', { ascending: false }));
   const last = comps && comps[0] ? comps[0].due_date : null;
-  await supabase.from('dt_chores').update({
+  ok(await supabase.from('dt_chores').update({
     last_completed_date: last,
     total_completions: Math.max(0, chore.total_completions - 1),
     next_due: nextDueFor(choreShape(chore), last ? parseISO(last) : new Date()),
-  }).eq('id', choreId);
+  }).eq('id', choreId));
 
-  const { data: prof } = await supabase.from('dt_profiles').select('*').single();
+  const prof = await ensureProfile(user);
   const xp = Math.max(0, prof.xp - 15);
-  await supabase.from('dt_profiles').update({
+  ok(await supabase.from('dt_profiles').update({
     xp, level: levelFromXP(xp), coins: Math.max(0, prof.coins - 3),
     mess_tier: round1(clamp(Number(prof.mess_tier) + 0.6, 0, 3)),
-  }).eq('user_id', prof.user_id);
+  }).eq('user_id', user.id));
 
   return { state: await getState() };
 }
 
 export async function editChoreCompletion(choreId, oldISO, newISO) {
-  await supabase.from('dt_chore_completions').delete().eq('chore_id', choreId).eq('due_date', oldISO);
+  ok(await supabase.from('dt_chore_completions').delete().eq('chore_id', choreId).eq('due_date', oldISO));
   if (newISO) {
-    await supabase.from('dt_chore_completions')
-      .upsert({ chore_id: choreId, due_date: newISO }, { onConflict: 'chore_id,due_date' });
+    ok(await supabase.from('dt_chore_completions')
+      .upsert({ chore_id: choreId, due_date: newISO }, { onConflict: 'chore_id,due_date' }));
   }
   await pruneChoreCompletions(choreId);
 
-  const { data: chore } = await supabase.from('dt_chores').select('*').eq('id', choreId).single();
-  const { data: comps } = await supabase
-    .from('dt_chore_completions').select('due_date').eq('chore_id', choreId).order('due_date', { ascending: false });
+  const chore = ok(await supabase.from('dt_chores').select('*').eq('id', choreId).single());
+  const comps = ok(await supabase
+    .from('dt_chore_completions').select('due_date').eq('chore_id', choreId).order('due_date', { ascending: false }));
   const last = comps && comps[0] ? comps[0].due_date : null;
   const total = newISO ? chore.total_completions : Math.max(0, chore.total_completions - 1);
-  await supabase.from('dt_chores').update({
+  ok(await supabase.from('dt_chores').update({
     last_completed_date: last, total_completions: total,
     next_due: nextDueFor(choreShape(chore), last ? parseISO(last) : new Date()),
-  }).eq('id', choreId);
+  }).eq('id', choreId));
 
   return { state: await getState() };
 }
@@ -342,11 +352,11 @@ export async function saveSettings(patch) {
 }
 
 export async function deleteHabit(id) {
-  await supabase.from('dt_habits').delete().eq('id', id);
+  ok(await supabase.from('dt_habits').delete().eq('id', id));
   return { state: await getState() };
 }
 
 export async function deleteChore(id) {
-  await supabase.from('dt_chores').delete().eq('id', id);
+  ok(await supabase.from('dt_chores').delete().eq('id', id));
   return { state: await getState() };
 }
