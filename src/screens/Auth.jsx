@@ -2,6 +2,27 @@ import React from 'react';
 import { supabase } from '../lib/supabase.js';
 import { Avatar } from '../pixel.jsx';
 
+// Where Supabase should send users after they click an email confirmation /
+// recovery link. Must match this app's deployed path (GitHub Pages serves it
+// under import.meta.env.BASE_URL, e.g. /daily-tracking/) and be present in the
+// project's Auth "Redirect URLs" allowlist — otherwise Supabase falls back to
+// the Site URL and the link lands on the wrong page (a 404).
+const EMAIL_REDIRECT_TO = window.location.origin + import.meta.env.BASE_URL;
+
+// Map a returned auth error (e.g. from an expired email link) to friendly copy.
+function readAuthErrorFromUrl() {
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+  if (!hash) return null;
+  const p = new URLSearchParams(hash);
+  const code = p.get('error_code');
+  const desc = p.get('error_description');
+  if (!p.get('error') && !code && !desc) return null;
+  if (code === 'otp_expired') {
+    return 'That email link has expired or was already used. Sign in below, or create your account again to get a fresh link.';
+  }
+  return desc || 'Sign-in link could not be used. Please try again.';
+}
+
 function Field({ label, type, value, onChange, placeholder, onEnter }) {
   return (
     <label style={{ display: 'block' }}>
@@ -36,13 +57,26 @@ export function AuthScreen() {
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState(null); // { kind: 'error'|'info', text }
 
+  // Surface an error carried back in the URL (e.g. an expired confirmation link
+  // redirected here as #error=...&error_code=otp_expired), then clean the URL.
+  React.useEffect(() => {
+    const text = readAuthErrorFromUrl();
+    if (text) {
+      setMsg({ kind: 'error', text });
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
   const submit = async () => {
     if (busy) return;
     if (!email || !password) { setMsg({ kind: 'error', text: 'Enter an email and password.' }); return; }
     setBusy(true); setMsg(null);
     try {
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email, password,
+          options: { emailRedirectTo: EMAIL_REDIRECT_TO },
+        });
         if (error) throw error;
         if (!data.session) {
           setMsg({ kind: 'info', text: 'Account created! Check your email to confirm, then sign in.' });
