@@ -3,6 +3,7 @@
 import React from 'react';
 import { Avatar, Room } from './pixel.jsx';
 import { parseISO, addDays, isoDate } from './data.jsx';
+import { pushSupported, pushPermission, enablePush, disablePush } from './lib/push.js';
 
 // Backdrop with pixel feel
 function ModalBackdrop({ children, onClose }) {
@@ -805,9 +806,120 @@ function UndoToast({ toast, onUndo, onDismiss }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// SETTINGS — display name, daily reminder, push notifications
+// ─────────────────────────────────────────────────────────────
+function PixToggle({ on, onClick }) {
+  return (
+    <button onClick={onClick} aria-pressed={on} style={{
+      width: 52, height: 28, padding: 3,
+      background: on ? 'var(--leaf, #6a9c4a)' : 'var(--paper-deep)',
+      border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
+      cursor: 'pointer', display: 'flex', alignItems: 'center',
+      justifyContent: on ? 'flex-end' : 'flex-start',
+    }}>
+      <span style={{ width: 18, height: 18, background: 'var(--ink)' }} />
+    </button>
+  );
+}
+
+function SettingsModal({ profile, onClose, onSave, onPushChange }) {
+  const [name, setName] = React.useState(profile.name || '');
+  const [remOn, setRemOn] = React.useState(!!profile.reminderEnabled);
+  const [remTime, setRemTime] = React.useState((profile.reminderTime || '07:00').slice(0, 5));
+  const [pushOn, setPushOn] = React.useState(!!profile.pushEnabled);
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+
+  const supported = pushSupported();
+  const perm = supported ? pushPermission() : 'unsupported';
+
+  const handlePush = async () => {
+    setBusy(true); setMsg('');
+    try {
+      if (!pushOn) {
+        const r = await enablePush();
+        if (r.ok) { setPushOn(true); if (onPushChange) onPushChange(true); setMsg('Notifications are on.'); }
+        else setMsg(r.reason || 'Could not enable notifications.');
+      } else {
+        await disablePush();
+        setPushOn(false); if (onPushChange) onPushChange(false); setMsg('Notifications are off.');
+      }
+    } catch (e) {
+      setMsg(e?.message || String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div style={{
+        width: 340, maxWidth: '100%',
+        background: 'var(--bg)', border: '3px solid var(--ink)', boxShadow: '6px 6px 0 var(--ink)',
+      }}>
+        <div style={{
+          padding: '10px 14px', background: 'var(--accent)', borderBottom: '3px solid var(--ink)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#fff', letterSpacing: '0.06em' }}>SETTINGS</div>
+          <button onClick={onClose} style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
+          }}>✕</button>
+        </div>
+
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 560, overflowY: 'auto' }}>
+          <PixField label="Display name" value={name} onChange={setName} placeholder="You" />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)' }}>DAILY REMINDER</div>
+            <PixToggle on={remOn} onClick={() => setRemOn(v => !v)} />
+          </div>
+          {remOn && <PixField label="Reminder time" type="time" value={remTime} onChange={setRemTime} />}
+
+          <div style={{ borderTop: '2px dashed var(--line-strong)', paddingTop: 12 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)', marginBottom: 8 }}>PUSH NOTIFICATIONS</div>
+            {!supported ? (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.4 }}>
+                Not supported in this browser. On iPhone, add Pixie to your Home Screen first (iOS 16.4+), then reopen and try again.
+              </div>
+            ) : (
+              <>
+                <button className="px-btn" disabled={busy} onClick={handlePush} style={{ width: '100%' }}>
+                  {busy ? '…' : pushOn ? 'DISABLE NOTIFICATIONS' : 'ENABLE NOTIFICATIONS'}
+                </button>
+                {perm === 'denied' && !pushOn && (
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--accent)', marginTop: 6, lineHeight: 1.4 }}>
+                    Notifications are blocked in your browser settings — allow them for this site, then try again.
+                  </div>
+                )}
+                {msg && <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>{msg}</div>}
+              </>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button className="px-btn ghost" onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
+            <button className="px-btn" style={{ flex: 2, fontSize: 12 }}
+              onClick={() => onSave({
+                displayName: name.trim() || 'You',
+                reminderEnabled: remOn,
+                reminderTime: remTime,
+                pushEnabled: pushOn,
+              })}>
+              SAVE
+            </button>
+          </div>
+        </div>
+      </div>
+    </ModalBackdrop>
+  );
+}
+
 export {
   OnboardingScreen,
   ModalBackdrop, PixField,
   AddItemModal, AchievementModal, LevelUpModal, PerfectDayModal,
-  EditCompletionModal, UndoToast,
+  EditCompletionModal, UndoToast, SettingsModal,
 };

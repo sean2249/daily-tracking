@@ -133,6 +133,7 @@ function App() {
         case 'EDIT_COMPLETION': { applyResult(await db.editChoreCompletion(action.id, action.oldISO, action.newISO)); break; }
         case 'ADD_HABIT': { applyResult(await db.addHabit(action.form)); break; }
         case 'ADD_CHORE': { applyResult(await db.addChore(action.form)); break; }
+        case 'SAVE_SETTINGS': { applyResult(await db.saveSettings(action.patch)); break; }
         case 'DELETE_HABIT': { applyResult(await db.deleteHabit(action.id)); setHabitDetailId(null); break; }
         case 'DELETE_CHORE': { applyResult(await db.deleteChore(action.id)); setChoreDetailId(null); break; }
         case 'CLEAR_CHECK_ANIM': setActiveCheck(null); break;

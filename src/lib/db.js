@@ -327,6 +327,20 @@ export async function addChore(form) {
   return { state: await getState() };
 }
 
+export async function saveSettings(patch) {
+  const user = await currentUser();
+  const updates = {};
+  if (patch.displayName !== undefined) updates.display_name = patch.displayName;
+  if (patch.reminderEnabled !== undefined) updates.reminder_enabled = patch.reminderEnabled;
+  if (patch.reminderTime !== undefined) updates.reminder_time = patch.reminderTime || null;
+  if (patch.pushEnabled !== undefined) updates.push_enabled = patch.pushEnabled;
+  if (Object.keys(updates).length) {
+    const { error } = await supabase.from('dt_profiles').update(updates).eq('user_id', user.id);
+    if (error) throw error;
+  }
+  return { state: await getState() };
+}
+
 export async function deleteHabit(id) {
   await supabase.from('dt_habits').delete().eq('id', id);
   return { state: await getState() };
