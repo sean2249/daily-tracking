@@ -1217,7 +1217,6 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
           profile={profile}
           onClose={() => setSettingsOpen(false)}
           onSave={(patch) => { dispatch({ type: 'SAVE_SETTINGS', patch }); setSettingsOpen(false); }}
-          onPushChange={(v) => dispatch({ type: 'SAVE_SETTINGS', patch: { pushEnabled: v } })}
         />
       )}
     </div>

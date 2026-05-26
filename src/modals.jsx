@@ -823,7 +823,7 @@ function PixToggle({ on, onClick, label }) {
   );
 }
 
-function SettingsModal({ profile, onClose, onSave, onPushChange }) {
+function SettingsModal({ profile, onClose, onSave }) {
   const [name, setName] = React.useState(profile.name || '');
   const [remOn, setRemOn] = React.useState(!!profile.reminderEnabled);
   const [remTime, setRemTime] = React.useState((profile.reminderTime || '07:00').slice(0, 5));
@@ -833,21 +833,30 @@ function SettingsModal({ profile, onClose, onSave, onPushChange }) {
 
   const supported = pushSupported();
   const perm = supported ? pushPermission() : 'unsupported';
+  const initialPush = !!profile.pushEnabled;
 
-  const handlePush = async () => {
+  // Everything (including push) is deferred to SAVE: toggling push only flips
+  // local state, and the browser subscribe/unsubscribe runs here. That way
+  // CANCEL truly cancels and never leaves a dangling server-side subscription.
+  const handleSave = async () => {
     setBusy(true); setMsg('');
     try {
-      if (!pushOn) {
-        const r = await enablePush();
-        if (r.ok) { setPushOn(true); if (onPushChange) onPushChange(true); setMsg('Notifications are on.'); }
-        else setMsg(r.reason || 'Could not enable notifications.');
-      } else {
-        await disablePush();
-        setPushOn(false); if (onPushChange) onPushChange(false); setMsg('Notifications are off.');
+      if (pushOn !== initialPush) {
+        const r = pushOn ? await enablePush() : await disablePush();
+        if (!r.ok) {
+          setMsg(r.reason || (pushOn ? 'Could not enable notifications.' : 'Could not disable notifications.'));
+          setBusy(false);
+          return;
+        }
       }
+      onSave({
+        displayName: name.trim() || 'You',
+        reminderEnabled: remOn,
+        reminderTime: remTime,
+        pushEnabled: pushOn,
+      });
     } catch (e) {
       setMsg(e?.message || String(e));
-    } finally {
       setBusy(false);
     }
   };
@@ -879,36 +888,33 @@ function SettingsModal({ profile, onClose, onSave, onPushChange }) {
           {remOn && <PixField label="Reminder time" type="time" value={remTime} onChange={setRemTime} />}
 
           <div style={{ borderTop: '2px dashed var(--line-strong)', paddingTop: 12 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)', marginBottom: 8 }}>PUSH NOTIFICATIONS</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em', color: 'var(--ink-soft)' }}>PUSH NOTIFICATIONS</div>
+              {supported && <PixToggle on={pushOn} onClick={() => setPushOn(v => !v)} label="Push notifications" />}
+            </div>
             {!supported ? (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.4 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.4, marginTop: 8 }}>
                 Not supported in this browser. On iPhone, add Pixie to your Home Screen first (iOS 16.4+), then reopen and try again.
               </div>
             ) : (
               <>
-                <button className="px-btn" disabled={busy} onClick={handlePush} style={{ width: '100%' }}>
-                  {busy ? '…' : pushOn ? 'DISABLE NOTIFICATIONS' : 'ENABLE NOTIFICATIONS'}
-                </button>
-                {perm === 'denied' && !pushOn && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>
+                  Applies when you tap SAVE; you'll be asked to allow notifications.
+                </div>
+                {perm === 'denied' && pushOn && (
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--accent)', marginTop: 6, lineHeight: 1.4 }}>
-                    Notifications are blocked in your browser settings — allow them for this site, then try again.
+                    Notifications are blocked in your browser settings — allow them for this site, then save.
                   </div>
                 )}
-                {msg && <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>{msg}</div>}
               </>
             )}
+            {msg && <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.4 }}>{msg}</div>}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <button className="px-btn ghost" onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
-            <button className="px-btn" style={{ flex: 2, fontSize: 12 }}
-              onClick={() => onSave({
-                displayName: name.trim() || 'You',
-                reminderEnabled: remOn,
-                reminderTime: remTime,
-                pushEnabled: pushOn,
-              })}>
-              SAVE
+            <button className="px-btn ghost" disabled={busy} onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
+            <button className="px-btn" disabled={busy} style={{ flex: 2, fontSize: 12 }} onClick={handleSave}>
+              {busy ? '…' : 'SAVE'}
             </button>
           </div>
         </div>

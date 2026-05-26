@@ -68,8 +68,11 @@ export async function enablePush() {
 export async function disablePush() {
   const sub = await getSubscription();
   if (sub) {
-    await supabase.from('dt_push_subscriptions').delete().eq('endpoint', sub.endpoint);
+    const { error } = await supabase.from('dt_push_subscriptions').delete().eq('endpoint', sub.endpoint);
+    // Unsubscribe locally regardless, but report a failed server delete so a
+    // stale row doesn't keep receiving sends silently.
     await sub.unsubscribe().catch(() => {});
+    if (error) return { ok: false, reason: error.message };
   }
   return { ok: true };
 }

@@ -16,6 +16,10 @@ function hashString(s) {
 const REVISION = MANIFEST.map((e) => e.revision || e.url).join(',');
 const CACHE = 'pixie-shell-' + hashString(REVISION);
 
+// The precached app-shell, resolved against the SW scope so it matches the
+// cache key under the GitHub Pages base path (e.g. /daily-tracking/index.html).
+const SHELL_URL = new URL('index.html', self.registration.scope).href;
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
@@ -42,7 +46,7 @@ self.addEventListener('fetch', (event) => {
 
   // App-shell navigation: network-first, fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('index.html')));
+    event.respondWith(fetch(req).catch(() => caches.match(SHELL_URL)));
     return;
   }
 

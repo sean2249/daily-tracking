@@ -27,8 +27,8 @@ async function currentUser() {
 }
 
 async function ensureProfile(user) {
-  const { data: prof } = await supabase
-    .from('dt_profiles').select('*').eq('user_id', user.id).maybeSingle();
+  const prof = ok(await supabase
+    .from('dt_profiles').select('*').eq('user_id', user.id).maybeSingle());
   if (prof) return prof;
   const fallbackName = user.email ? user.email.split('@')[0] : 'You';
   const { data: created, error } = await supabase
@@ -233,8 +233,9 @@ export async function completeChore(choreId) {
   if (existsToday) return { state: await getState() };
 
   const overdue = chore.next_due ? dayDiff(parseISO(chore.next_due), new Date()) < 0 : false;
+  const xpAward = overdue ? 22 : 15;
 
-  ok(await supabase.from('dt_chore_completions').insert({ chore_id: choreId, due_date: date }));
+  ok(await supabase.from('dt_chore_completions').insert({ chore_id: choreId, due_date: date, xp_awarded: xpAward }));
   await pruneChoreCompletions(choreId);
 
   const total = chore.total_completions + 1;
@@ -243,7 +244,7 @@ export async function completeChore(choreId) {
   }).eq('id', choreId));
 
   const prof = await ensureProfile(user);
-  const xp = prof.xp + (overdue ? 22 : 15);
+  const xp = prof.xp + xpAward;
   const level = levelFromXP(xp);
   const leveledUp = level > prof.level ? level : null;
   ok(await supabase.from('dt_profiles').update({
@@ -258,9 +259,11 @@ export async function undoChore(choreId) {
   const date = todayISO();
   const user = await currentUser();
   const existsToday = ok(await supabase
-    .from('dt_chore_completions').select('id').eq('chore_id', choreId).eq('due_date', date).maybeSingle());
+    .from('dt_chore_completions').select('id, xp_awarded').eq('chore_id', choreId).eq('due_date', date).maybeSingle());
   if (!existsToday) return { state: await getState() };
 
+  // Refund exactly what was granted (legacy rows have no record → assume 15).
+  const xpRefund = existsToday.xp_awarded ?? 15;
   ok(await supabase.from('dt_chore_completions').delete().eq('id', existsToday.id));
   const chore = ok(await supabase.from('dt_chores').select('*').eq('id', choreId).single());
   const comps = ok(await supabase
@@ -273,7 +276,7 @@ export async function undoChore(choreId) {
   }).eq('id', choreId));
 
   const prof = await ensureProfile(user);
-  const xp = Math.max(0, prof.xp - 15);
+  const xp = Math.max(0, prof.xp - xpRefund);
   ok(await supabase.from('dt_profiles').update({
     xp, level: levelFromXP(xp), coins: Math.max(0, prof.coins - 3),
     mess_tier: round1(clamp(Number(prof.mess_tier) + 0.6, 0, 3)),
