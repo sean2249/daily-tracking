@@ -41,11 +41,13 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e:smoke
 
-  # Tier 3 — full live E2E against real Supabase. Manual only.
+  # Tier 3 — full live E2E against real Supabase. Manual (workflow_dispatch).
+  # TEMP: also runs on pull_request to validate Tier 3 in CI for this PR.
+  # Revert to workflow_dispatch-only once it's green.
   # Self-skips unless the E2E_TEST_EMAIL / E2E_TEST_PASSWORD secrets are set
   # (a confirmed throwaway test account).
   e2e-full:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
