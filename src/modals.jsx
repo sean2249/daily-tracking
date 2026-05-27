@@ -151,8 +151,8 @@ function OnboardingScreen({ onFinish }) {
                   fontFamily: 'var(--font-body)', fontSize: 13,
                   background: habit.name === p.name ? 'var(--accent)' : 'var(--paper)',
                   color: habit.name === p.name ? '#fff' : 'var(--ink)',
-                  border: '2px solid var(--ink)',
-                  boxShadow: '2px 2px 0 var(--ink)',
+                  borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                   padding: '6px 10px',
                   cursor: 'pointer',
                 }}>{p.emoji} {p.name}</button>
@@ -180,8 +180,8 @@ function OnboardingScreen({ onFinish }) {
                   fontFamily: 'var(--font-display)', fontSize: 9,
                   background: habit.schedule === s.key ? 'var(--accent)' : 'var(--paper)',
                   color: habit.schedule === s.key ? '#fff' : 'var(--ink)',
-                  border: '2px solid var(--ink)',
-                  boxShadow: '2px 2px 0 var(--ink)',
+                  borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                   cursor: 'pointer',
                   letterSpacing: '0.04em',
                 }}>{s.label}</button>
@@ -228,8 +228,8 @@ function PixField({ label, value, onChange, placeholder, type = 'text', disabled
           fontSize: 15,
           background: disabled ? 'var(--paper-deep)' : 'var(--paper)',
           color: 'var(--ink)',
-          border: '2px solid var(--ink)',
-          boxShadow: '2px 2px 0 var(--ink)',
+          borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+          boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
           outline: 'none',
           boxSizing: 'border-box',
         }}
@@ -245,20 +245,35 @@ const HABIT_EMOJI = ['📖','🧘','🎵','💧','🚶','🛌','🏃','🪥','�
 const CHORE_EMOJI = ['🧹','🧺','🗑️','🪒','👕','🧴','🛒','🧽','🚿','🔥','🍳','🧯','🛏️','🪴','📦','📬','💡','🔧'];
 const COLORS = ['#d96f47','#e5a93a','#6a9c4a','#88c4d9','#d97a8f','#9989c5','#5d8aa8','#c95a32'];
 
-function AddItemModal({ kind, onClose, onSave }) {
+function AddItemModal({ kind, onClose, onSave, existing, onDelete }) {
   const isHabit = kind === 'habit';
-  const [form, setForm] = React.useState({
+  const isEdit = !!existing;
+  const [form, setForm] = React.useState(() => existing ? {
+    name: existing.name || '',
+    emoji: existing.emoji || (isHabit ? '📖' : '🧹'),
+    color: existing.color || COLORS[0],
+    schedule: isHabit ? (existing.schedule || 'daily') : null,
+    weekdays: existing.weekdays || [0,1,2,3,4,5,6],
+    frequency: isHabit ? null : 'daily',
+    // Only carry over the interval when the chore was already a daily/every-N-days
+    // cadence; legacy weekly/monthly intervals aren't in days, so fall back to 7.
+    interval: existing.frequency === 'daily' && existing.interval ? existing.interval : 7,
+    dayOfMonth: existing.dayOfMonth || 1,
+    reminderTime: existing.reminderTime || '',
+    notes: existing.notes || '',
+  } : {
     name: '',
     emoji: isHabit ? '📖' : '🧹',
     color: COLORS[0],
     schedule: isHabit ? 'daily' : null,
     weekdays: [0,1,2,3,4,5,6],
-    frequency: isHabit ? null : 'weekly',
-    interval: 1,
+    frequency: isHabit ? null : 'daily',
+    interval: 7,
     dayOfMonth: 1,
     reminderTime: '',
     notes: '',
   });
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const emojiSet = isHabit ? HABIT_EMOJI : CHORE_EMOJI;
   const dn = ['S','M','T','W','T','F','S'];
@@ -275,21 +290,21 @@ function AddItemModal({ kind, onClose, onSave }) {
       <div style={{
         width: 340, maxWidth: '100%',
         background: 'var(--bg)',
-        border: '3px solid var(--ink)',
-        boxShadow: '6px 6px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
       }}>
         {/* title bar */}
         <div style={{
           padding: '10px 14px',
           background: 'var(--accent)',
-          borderBottom: '3px solid var(--ink)',
+          borderBottom: '1.5px solid rgba(42,29,18,0.18)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{
             fontFamily: 'var(--font-display)',
             fontSize: 13, color: '#fff',
             letterSpacing: '0.06em',
-          }}>NEW {isHabit ? 'HABIT' : 'CHORE'}</div>
+          }}>{isEdit ? 'EDIT' : 'NEW'} {isHabit ? 'HABIT' : 'CHORE'}</div>
           <button onClick={onClose} aria-label="Close dialog" style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#fff', fontFamily: 'var(--font-display)',
@@ -318,8 +333,8 @@ function AddItemModal({ kind, onClose, onSave }) {
               gap: 4,
               padding: 6,
               background: 'var(--paper)',
-              border: '2px solid var(--ink)',
-              boxShadow: '2px 2px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
             }}>
               {emojiSet.map(e => (
                 <button
@@ -329,7 +344,7 @@ function AddItemModal({ kind, onClose, onSave }) {
                     aspectRatio: '1',
                     fontSize: 17,
                     background: form.emoji === e ? form.color : 'transparent',
-                    border: form.emoji === e ? '2px solid var(--ink)' : '2px solid transparent',
+                    border: form.emoji === e ? '1.5px solid rgba(42,29,18,0.18)' : '1.5px solid transparent',
                     cursor: 'pointer',
                   }}>{e}</button>
               ))}
@@ -352,8 +367,8 @@ function AddItemModal({ kind, onClose, onSave }) {
                     style={{
                       flex: 1, height: 28,
                       background: c,
-                      border: form.color === c ? '3px solid var(--ink)' : '2px solid var(--ink)',
-                      boxShadow: form.color === c ? '0 0 0 2px #fbf3df, 2px 2px 0 var(--ink)' : '2px 2px 0 var(--ink)',
+                      border: form.color === c ? '1.5px solid rgba(42,29,18,0.18)' : '1.5px solid rgba(42,29,18,0.18)',
+                      boxShadow: form.color === c ? '0 0 0 2px #fbf3df, 2px 2px 0 var(--ink)' : '0 2px 6px rgba(42,29,18,0.06)',
                       cursor: 'pointer',
                     }}/>
                 ))}
@@ -384,8 +399,8 @@ function AddItemModal({ kind, onClose, onSave }) {
                       letterSpacing: '0.04em',
                       background: form.schedule === o.k ? 'var(--accent)' : 'var(--paper)',
                       color: form.schedule === o.k ? '#fff' : 'var(--ink)',
-                      border: '2px solid var(--ink)',
-                      boxShadow: '2px 2px 0 var(--ink)',
+                      borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                      boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                       cursor: 'pointer',
                     }}>{o.l}</button>
                 ))}
@@ -400,8 +415,8 @@ function AddItemModal({ kind, onClose, onSave }) {
                       fontFamily: 'var(--font-display)', fontSize: 11,
                       background: form.weekdays.includes(i) ? 'var(--leaf)' : 'var(--paper)',
                       color: form.weekdays.includes(i) ? '#fff' : 'var(--ink)',
-                      border: '2px solid var(--ink)',
-                      boxShadow: '2px 2px 0 var(--ink)',
+                      borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                      boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                       opacity: form.schedule === 'custom' ? 1 : 0.65,
                       cursor: form.schedule === 'custom' ? 'pointer' : 'default',
                     }}>{d}</button>
@@ -414,49 +429,52 @@ function AddItemModal({ kind, onClose, onSave }) {
                 fontFamily: 'var(--font-display)', fontSize: 9,
                 color: 'var(--ink-soft)', letterSpacing: '0.08em',
                 marginBottom: 4,
-              }}>FREQUENCY</div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[{k:'daily', l:'DAILY'},{k:'weekly', l:'WEEKLY'},{k:'monthly', l:'MONTHLY'}].map(o => (
-                  <button key={o.k}
-                    onClick={() => setForm({...form, frequency: o.k})}
+              }}>REPEAT EVERY</div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: 6,
+                background: 'var(--paper)',
+                borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
+              }}>
+                <button onClick={() => setForm(f => ({...f, interval: Math.max(1, (f.interval||1) - 1)}))}
+                  style={{
+                    width: 36, height: 36, fontFamily: 'var(--font-display)', fontSize: 18,
+                    fontWeight: 700, background: 'var(--paper-deep)', color: 'var(--ink)',
+                    borderRadius: 10, border: '1.5px solid rgba(42,29,18,0.18)', cursor: 'pointer',
+                  }}>−</button>
+                <div style={{
+                  flex: 1, textAlign: 'center',
+                  fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700,
+                  color: 'var(--ink)',
+                }}>{form.interval || 1} <span style={{ fontSize: 14, color: 'var(--ink-soft)', fontWeight: 400 }}>day{(form.interval||1) > 1 ? 's' : ''}</span></div>
+                <button onClick={() => setForm(f => ({...f, interval: Math.min(365, (f.interval||1) + 1)}))}
+                  style={{
+                    width: 36, height: 36, fontFamily: 'var(--font-display)', fontSize: 18,
+                    fontWeight: 700, background: 'var(--paper-deep)', color: 'var(--ink)',
+                    borderRadius: 10, border: '1.5px solid rgba(42,29,18,0.18)', cursor: 'pointer',
+                  }}>+</button>
+              </div>
+              <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                {[1, 3, 7, 14, 30].map(n => (
+                  <button key={n}
+                    onClick={() => setForm({...form, interval: n})}
                     style={{
-                      flex: 1, padding: '8px 0',
-                      fontFamily: 'var(--font-display)', fontSize: 9,
+                      flex: 1, padding: '6px 0',
+                      fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700,
                       letterSpacing: '0.04em',
-                      background: form.frequency === o.k ? 'var(--accent)' : 'var(--paper)',
-                      color: form.frequency === o.k ? '#fff' : 'var(--ink)',
-                      border: '2px solid var(--ink)',
-                      boxShadow: '2px 2px 0 var(--ink)',
+                      background: form.interval === n ? 'var(--accent)' : 'var(--paper)',
+                      color: form.interval === n ? '#fff' : 'var(--ink-soft)',
+                      borderRadius: 10, border: '1.5px solid rgba(42,29,18,0.18)',
                       cursor: 'pointer',
-                    }}>{o.l}</button>
+                    }}>{n}d</button>
                 ))}
               </div>
-              {form.frequency === 'weekly' && (
-                <div style={{ display: 'flex', gap: 3, marginTop: 6 }}>
-                  {dn.map((d, i) => (
-                    <button key={i} onClick={() => toggleWeekday(i)}
-                      style={{
-                        flex: 1, height: 32,
-                        fontFamily: 'var(--font-display)', fontSize: 11,
-                        background: form.weekdays.includes(i) ? 'var(--leaf)' : 'var(--paper)',
-                        color: form.weekdays.includes(i) ? '#fff' : 'var(--ink)',
-                        border: '2px solid var(--ink)',
-                        boxShadow: '2px 2px 0 var(--ink)',
-                        cursor: 'pointer',
-                      }}>{d}</button>
-                  ))}
-                </div>
-              )}
-              {form.frequency === 'monthly' && (
-                <div style={{ marginTop: 6 }}>
-                  <PixField label="Day of month" value={String(form.dayOfMonth)}
-                    onChange={v => setForm({...form, dayOfMonth: Math.max(1, Math.min(28, +v||1))})} />
-                </div>
-              )}
             </div>
           )}
 
-          <PixField label="Reminder time (optional)" value={form.reminderTime} placeholder="07:00"
+          <PixField label="Reminder time (optional)" value={form.reminderTime}
+                    type="time"
                     onChange={v => setForm({...form, reminderTime: v})} />
 
           {!isHabit && (
@@ -467,14 +485,37 @@ function AddItemModal({ kind, onClose, onSave }) {
 
         <div style={{
           padding: 12,
-          borderTop: '3px solid var(--ink)',
+          borderTop: '1.5px solid rgba(42,29,18,0.18)',
           background: 'var(--paper-deep)',
-          display: 'flex', gap: 8,
+          display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <button className="px-btn ghost" onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
-          <button className="px-btn" onClick={() => onSave(form)} style={{ flex: 2, fontSize: 12 }} disabled={!form.name}>
-            CREATE
-          </button>
+          {isEdit && confirmDelete && (
+            <div style={{
+              padding: '10px 12px',
+              background: '#fbe2d6',
+              border: '1.5px solid rgba(201,90,50,0.45)',
+              borderRadius: 12,
+              fontFamily: 'var(--font-body)', fontSize: 13,
+              color: 'var(--ink)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ flex: 1 }}>Delete this {isHabit ? 'habit' : 'chore'}?</span>
+              <button className="px-btn ghost" style={{ padding: '6px 10px', fontSize: 11 }}
+                      onClick={() => setConfirmDelete(false)}>CANCEL</button>
+              <button className="px-btn" style={{ padding: '6px 10px', fontSize: 11, background: 'var(--accent-2)' }}
+                      onClick={() => onDelete && onDelete()}>DELETE</button>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isEdit && !confirmDelete && (
+              <button className="px-btn ghost" onClick={() => setConfirmDelete(true)}
+                      style={{ fontSize: 12, color: 'var(--accent-2)' }}>DELETE</button>
+            )}
+            <button className="px-btn ghost" onClick={onClose} style={{ flex: 1, fontSize: 12 }}>CANCEL</button>
+            <button className="px-btn" onClick={() => onSave(form)} style={{ flex: 2, fontSize: 12 }} disabled={!form.name}>
+              {isEdit ? 'SAVE' : 'CREATE'}
+            </button>
+          </div>
         </div>
       </div>
     </ModalBackdrop>
@@ -491,15 +532,15 @@ function AchievementModal({ achievement, onClose }) {
       <div style={{
         width: 280,
         background: 'var(--paper)',
-        border: '4px solid var(--ink)',
-        boxShadow: '6px 6px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
         position: 'relative',
         animation: 'pop-in 0.4s cubic-bezier(.4,1.6,.5,1)',
       }}>
         <div style={{
           padding: '10px 12px',
           background: 'var(--gold)',
-          borderBottom: '3px solid var(--ink)',
+          borderBottom: '1.5px solid rgba(42,29,18,0.18)',
           fontFamily: 'var(--font-display)',
           fontSize: 12, color: 'var(--ink)',
           letterSpacing: '0.06em',
@@ -510,8 +551,8 @@ function AchievementModal({ achievement, onClose }) {
             display: 'inline-flex',
             width: 84, height: 84,
             background: 'var(--paper-deep)',
-            border: '3px solid var(--ink)',
-            boxShadow: '3px 3px 0 var(--ink)',
+            borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+            boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
             alignItems: 'center', justifyContent: 'center',
             fontSize: 44,
             animation: 'glow 1.4s ease-in-out infinite',
@@ -551,8 +592,8 @@ function LevelUpModal({ level, onClose }) {
       <div style={{
         width: 280, textAlign: 'center',
         background: 'var(--paper)',
-        border: '4px solid var(--ink)',
-        boxShadow: '6px 6px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
         padding: '24px 16px',
         animation: 'pop-in 0.45s cubic-bezier(.4,1.6,.5,1)',
         position: 'relative', overflow: 'hidden',
@@ -588,8 +629,8 @@ function PerfectDayModal({ onClose }) {
       <div style={{
         width: 300, textAlign: 'center',
         background: 'var(--paper)',
-        border: '4px solid var(--ink)',
-        boxShadow: '6px 6px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
         padding: '24px 16px',
         animation: 'pop-in 0.5s cubic-bezier(.4,1.6,.5,1)',
       }}>
@@ -633,14 +674,14 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
       <div style={{
         width: 320,
         background: 'var(--bg)',
-        border: '3px solid var(--ink)',
-        boxShadow: '6px 6px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
       }}>
         {/* title bar */}
         <div style={{
           padding: '10px 14px',
           background: 'var(--accent)',
-          borderBottom: '3px solid var(--ink)',
+          borderBottom: '1.5px solid rgba(42,29,18,0.18)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{
@@ -659,14 +700,14 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
             display: 'flex', alignItems: 'center', gap: 10,
             padding: 10,
             background: 'var(--paper)',
-            border: '2px solid var(--ink)',
-            boxShadow: '2px 2px 0 var(--ink)',
+            borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+            boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
             marginBottom: 14,
           }}>
             <div style={{
               width: 36, height: 36,
               background: 'var(--paper-deep)',
-              border: '2px solid var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20,
             }}>{chore.emoji}</div>
@@ -692,8 +733,8 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
               flex: 1,
               padding: '12px 10px',
               background: 'var(--paper)',
-              border: '2px solid var(--ink)',
-              boxShadow: '2px 2px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
               textAlign: 'center',
               fontFamily: 'var(--font-display)',
               fontSize: 16, color: 'var(--ink)',
@@ -723,8 +764,8 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
                     letterSpacing: '0.04em',
                     background: isSel ? 'var(--accent)' : (isToday ? 'var(--gold)' : 'var(--paper)'),
                     color: isSel ? '#fff' : 'var(--ink)',
-                    border: '2px solid var(--ink)',
-                    boxShadow: '2px 2px 0 var(--ink)',
+                    borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                    boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                     cursor: 'pointer',
                   }}>
                   <div style={{ opacity: 0.7 }}>{dn[d.getDay()].slice(0,1)}</div>
@@ -737,7 +778,7 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
 
         <div style={{
           padding: 12,
-          borderTop: '3px solid var(--ink)',
+          borderTop: '1.5px solid rgba(42,29,18,0.18)',
           background: 'var(--paper-deep)',
           display: 'flex', gap: 8,
         }}>
@@ -777,8 +818,8 @@ function UndoToast({ toast, onUndo, onDismiss }) {
       padding: '10px 12px',
       background: 'var(--ink)',
       color: '#fbf3df',
-      border: '3px solid var(--ink)',
-      boxShadow: '4px 4px 0 rgba(0,0,0,0.3)',
+      borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
       animation: 'drop-in 0.3s ease-out',
     }}>
       <div style={{ fontSize: 20 }}>✓</div>
@@ -814,11 +855,12 @@ function PixToggle({ on, onClick, label }) {
     <button onClick={onClick} aria-pressed={on} aria-label={label} style={{
       width: 52, height: 28, padding: 3,
       background: on ? 'var(--leaf, #6a9c4a)' : 'var(--paper-deep)',
-      border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
+      borderRadius: 9999,
+      border: '1.5px solid rgba(42,29,18,0.18)', boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
       cursor: 'pointer', display: 'flex', alignItems: 'center',
       justifyContent: on ? 'flex-end' : 'flex-start',
     }}>
-      <span aria-hidden="true" style={{ width: 18, height: 18, background: 'var(--ink)' }} />
+      <span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--ink)' }} />
     </button>
   );
 }
@@ -865,10 +907,12 @@ function SettingsModal({ profile, onClose, onSave }) {
     <ModalBackdrop onClose={onClose}>
       <div style={{
         width: 340, maxWidth: '100%',
-        background: 'var(--bg)', border: '3px solid var(--ink)', boxShadow: '6px 6px 0 var(--ink)',
+        background: 'var(--bg)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)', boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
+        overflow: 'hidden',
       }}>
         <div style={{
-          padding: '10px 14px', background: 'var(--accent)', borderBottom: '3px solid var(--ink)',
+          padding: '10px 14px', background: 'var(--accent)', borderBottom: '1.5px solid rgba(42,29,18,0.18)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#fff', letterSpacing: '0.06em' }}>SETTINGS</div>

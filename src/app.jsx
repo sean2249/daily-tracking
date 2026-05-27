@@ -4,7 +4,6 @@ import React from 'react';
 import { supabase } from './lib/supabase.js';
 import * as db from './lib/db.js';
 import { isoDate } from './data.jsx';
-import { IOSDevice } from './iosFrame.jsx';
 import { Confetti } from './pixel.jsx';
 import {
   TodayScreen, HabitsListScreen, HabitDetailScreen,
@@ -76,6 +75,7 @@ function App() {
   const [habitDetailId, setHabitDetailId] = React.useState(null);
   const [choreDetailId, setChoreDetailId] = React.useState(null);
   const [addModal, setAddModal] = React.useState(null);
+  const [editModal, setEditModal] = React.useState(null);
   const [pendingAchievement, setPendingAchievement] = React.useState(null);
   const [pendingLevelUp, setPendingLevelUp] = React.useState(null);
   const [pendingPerfectDay, setPendingPerfectDay] = React.useState(false);
@@ -142,6 +142,8 @@ function App() {
         case 'EDIT_COMPLETION': { applyResult(await db.editChoreCompletion(action.id, action.oldISO, action.newISO)); break; }
         case 'ADD_HABIT': { applyResult(await db.addHabit(action.form)); break; }
         case 'ADD_CHORE': { applyResult(await db.addChore(action.form)); break; }
+        case 'EDIT_HABIT': { applyResult(await db.editHabit(action.id, action.form)); break; }
+        case 'EDIT_CHORE': { applyResult(await db.editChore(action.id, action.form)); break; }
         case 'SAVE_SETTINGS': { applyResult(await db.saveSettings(action.patch)); break; }
         case 'DELETE_HABIT': { applyResult(await db.deleteHabit(action.id)); setHabitDetailId(null); break; }
         case 'DELETE_CHORE': { applyResult(await db.deleteChore(action.id)); setChoreDetailId(null); break; }
@@ -168,7 +170,7 @@ function App() {
         const h = screenState.habits.find(x => x.id === habitDetailId);
         if (!h) return null; // effect above clears the stale id
         return <HabitDetailScreen habit={h} state={screenState} dispatch={dispatch}
-          onBack={() => setHabitDetailId(null)} onEdit={() => {}} />;
+          onBack={() => setHabitDetailId(null)} onEdit={() => setEditModal({ kind: 'habit', id: h.id })} />;
       }
       return <HabitsListScreen state={screenState} dispatch={dispatch}
         onSelect={setHabitDetailId} onAdd={() => setAddModal('habit')} />;
@@ -178,7 +180,7 @@ function App() {
         const c = screenState.chores.find(x => x.id === choreDetailId);
         if (!c) return null; // effect above clears the stale id
         return <ChoreDetailScreen chore={c} state={screenState} dispatch={dispatch}
-          onBack={() => setChoreDetailId(null)} onEdit={() => {}} />;
+          onBack={() => setChoreDetailId(null)} onEdit={() => setEditModal({ kind: 'chore', id: c.id })} />;
       }
       return <ChoresListScreen state={screenState} dispatch={dispatch}
         onSelect={setChoreDetailId} onAdd={() => setAddModal('chore')} />;
@@ -225,6 +227,18 @@ function App() {
             onClose={() => setAddModal(null)}
             onSave={(form) => { setAddModal(null); dispatch({ type: addModal === 'habit' ? 'ADD_HABIT' : 'ADD_CHORE', form }); }} />
         )}
+        {editModal && (() => {
+          const existing = editModal.kind === 'habit'
+            ? data.habits.find(h => h.id === editModal.id)
+            : data.chores.find(c => c.id === editModal.id);
+          if (!existing) return null;
+          return (
+            <AddItemModal kind={editModal.kind} existing={existing}
+              onClose={() => setEditModal(null)}
+              onSave={(form) => { setEditModal(null); dispatch({ type: editModal.kind === 'habit' ? 'EDIT_HABIT' : 'EDIT_CHORE', id: editModal.id, form }); }}
+              onDelete={() => { setEditModal(null); dispatch({ type: editModal.kind === 'habit' ? 'DELETE_HABIT' : 'DELETE_CHORE', id: editModal.id }); }} />
+          );
+        })()}
         {pendingAchievement && (
           <AchievementModal achievement={pendingAchievement} onClose={() => setPendingAchievement(null)} />
         )}
@@ -252,20 +266,19 @@ function App() {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{
-        textAlign: 'center', marginBottom: 20,
-        fontFamily: 'var(--font-display)', color: '#5d4632', letterSpacing: '0.06em',
-      }}>
-        <div style={{ fontSize: 22, color: '#2a1d12' }}>{TWEAKS.appName.toUpperCase()} · DAILY</div>
-        <div style={{ fontSize: 11, marginTop: 6, opacity: 0.8 }}>
-          {PALETTES[TWEAKS.palette].subtitle} · pixel-art habit + chore tracker
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <IOSDevice width={402} height={874} dark={false}>
+      <div className="phone-stage" style={{ display: 'flex', justifyContent: 'center' }}>
+        <div className="phone-frame" style={{
+          width: 402,
+          height: 874,
+          background: 'var(--bg)',
+          border: '1.5px solid rgba(42,29,18,0.12)',
+          borderRadius: 32,
+          boxShadow: '0 24px 60px rgba(42,29,18,0.18), 0 4px 12px rgba(42,29,18,0.06)',
+          overflow: 'hidden',
+          position: 'relative',
+        }}>
           {phoneInner}
-        </IOSDevice>
+        </div>
       </div>
     </div>
   );

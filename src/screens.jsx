@@ -56,8 +56,8 @@ function PixBadge({ children, bg = 'var(--gold)', color = 'var(--ink)', size = 1
       fontFamily: 'var(--font-display)',
       fontSize: size,
       color, background: bg,
-      border: '2px solid var(--ink)',
-      boxShadow: '2px 2px 0 var(--ink)',
+      borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+      boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
       padding: '3px 6px',
       letterSpacing: '0.04em',
       display: 'inline-flex',
@@ -80,9 +80,10 @@ function ScreenHeader({ title, subtitle, right }) {
       <div>
         <div style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 22, lineHeight: 1.1,
+          fontSize: 30, fontWeight: 700,
+          lineHeight: 1.05,
           color: 'var(--ink)',
-          letterSpacing: '0.02em',
+          letterSpacing: '0.01em',
         }}>{title}</div>
         {subtitle && (
           <div style={{
@@ -105,9 +106,10 @@ function TaskRow({ icon, name, sub, badge, checked, color, onCheck, dim = false,
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '12px 14px',
-      background: checked ? '#d8e8c4' : 'var(--paper)',
-      border: '3px solid var(--ink)',
-      boxShadow: checked ? '2px 2px 0 var(--ink)' : '3px 3px 0 var(--ink)',
+      background: checked ? '#d8e8c4' : (danger ? '#fbe2d6' : 'var(--paper)'),
+      borderRadius: 12,
+      border: danger && !checked ? '1.5px solid rgba(201,90,50,0.45)' : '1.5px solid rgba(42,29,18,0.18)',
+      boxShadow: checked ? '0 2px 6px rgba(42,29,18,0.06)' : '0 4px 10px rgba(42,29,18,0.08)',
       transform: checked ? 'translate(1px,1px)' : 'translate(0,0)',
       margin: '0 16px 10px',
       opacity: dim ? 0.55 : 1,
@@ -132,22 +134,12 @@ function TaskRow({ icon, name, sub, badge, checked, color, onCheck, dim = false,
           zIndex: 2,
         }}>DONE!</div>
       )}
-      {danger && !checked && (
-        <div style={{
-          position: 'absolute', top: -6, right: -6,
-          background: '#c95a32', color: '#fff',
-          fontFamily: 'var(--font-display)',
-          fontSize: 8, letterSpacing: '0.06em',
-          padding: '3px 5px',
-          border: '2px solid var(--ink)',
-          boxShadow: '2px 2px 0 var(--ink)',
-        }}>OVERDUE</div>
-      )}
+      {/* danger state shown via row color + "Nd late" in sub line */}
       <div style={{
         width: 38, height: 38,
         background: color || 'var(--paper-deep)',
-        border: '2px solid var(--ink)',
-        boxShadow: '2px 2px 0 var(--ink)',
+        borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+        boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 22, lineHeight: 1,
         flexShrink: 0,
@@ -205,7 +197,7 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
       background: `
         linear-gradient(180deg, #f8e8b5 0%, #f0d896 100%)
       `,
-      borderBottom: '3px solid var(--ink)',
+      borderBottom: '1.5px solid rgba(42,29,18,0.18)',
     }}>
       {/* clouds */}
       <div style={{
@@ -276,8 +268,8 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
               flex: '0 0 170px',
               padding: 10,
               background: done ? '#e8f0d8' : 'var(--paper)',
-              border: '3px solid var(--ink)',
-              boxShadow: '3px 3px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
             }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -393,12 +385,12 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
           textAlign: 'center',
           padding: '6px 0',
           background: isToday ? 'var(--accent)' : 'transparent',
-          border: '2px solid var(--ink)',
+          borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
           color: isToday ? '#fff' : 'var(--ink)',
           fontFamily: 'var(--font-display)',
           fontSize: 9,
           letterSpacing: '0.04em',
-          boxShadow: isToday ? '2px 2px 0 var(--ink)' : 'none',
+          boxShadow: isToday ? '0 2px 6px rgba(42,29,18,0.06)' : 'none',
         }}>
           <div style={{ opacity: 0.7 }}>{dayNames[d.getDay()].slice(0,1)}</div>
           <div style={{ fontSize: 13, marginTop: 2 }}>{d.getDate()}</div>
@@ -424,8 +416,8 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
             right={<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <PixBadge bg="var(--accent)" color="#fff" size={10}>LV {profile.level}</PixBadge>
               <div style={{
-                background: 'var(--paper)', border: '2px solid var(--ink)',
-                boxShadow: '2px 2px 0 var(--ink)', padding: 4,
+                background: 'var(--paper)', borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                boxShadow: '0 2px 6px rgba(42,29,18,0.06)', padding: 4,
               }}>
                 <AvatarBust hairTier={state.hairTier} scale={1.4} mood={allDone ? 'happy' : 'smile'} />
               </div>
@@ -447,8 +439,8 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
             <div style={{
               padding: 12,
               background: 'var(--paper-deep)',
-              border: '3px solid var(--ink)',
-              boxShadow: '3px 3px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
               display: 'flex', gap: 12, alignItems: 'center',
             }}>
               <Room messTier={state.messTier} hairTier={state.hairTier} scale={1.2} showCharacter={true} bobChar={false} />
@@ -488,7 +480,7 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
         <Hero compact={true} />
         <div style={{
           background: 'var(--bg)',
-          borderTop: '3px solid var(--ink)',
+          borderTop: '1.5px solid rgba(42,29,18,0.18)',
           position: 'relative',
           zIndex: 2,
           paddingTop: 6,
@@ -530,8 +522,8 @@ function HabitsListScreen({ state, dispatch, onSelect, onAdd }) {
                   padding: '12px 14px',
                   marginBottom: 10,
                   background: todayDone ? '#d8e8c4' : 'var(--paper)',
-                  border: '3px solid var(--ink)',
-                  boxShadow: '4px 4px 0 var(--ink)',
+                  borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 6px 14px rgba(42,29,18,0.10)',
                   position: 'relative',
                   overflow: 'hidden',
                 }}>
@@ -554,8 +546,8 @@ function HabitsListScreen({ state, dispatch, onSelect, onAdd }) {
                 <div style={{
                   width: 44, height: 44,
                   background: h.color,
-                  border: '2px solid var(--ink)',
-                  boxShadow: '2px 2px 0 var(--ink)',
+                  borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 22,
                   flexShrink: 0,
@@ -670,8 +662,8 @@ function HabitDetailScreen({ habit, state, dispatch, onBack, onEdit }) {
             <div style={{
               width: 56, height: 56,
               background: habit.color,
-              border: '3px solid var(--ink)',
-              boxShadow: '3px 3px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 28,
             }}>{habit.emoji}</div>
@@ -700,8 +692,8 @@ function HabitDetailScreen({ habit, state, dispatch, onBack, onEdit }) {
               <div key={i} style={{
                 padding: '8px 10px',
                 background: 'var(--paper)',
-                border: '3px solid var(--ink)',
-                boxShadow: '3px 3px 0 var(--ink)',
+                borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
                 textAlign: 'center',
               }}>
                 <div style={{
@@ -759,11 +751,6 @@ function HabitDetailScreen({ habit, state, dispatch, onBack, onEdit }) {
               ))}
             </div>
           </div>
-
-          {/* polaroid sticker book */}
-          <div style={{ marginTop: 16 }}>
-            <PolaroidCalendar habit={habit} />
-          </div>
         </div>
       </ScreenScroll>
     </div>
@@ -805,9 +792,9 @@ function ChoresListScreen({ state, dispatch, onSelect, onAdd }) {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 14px',
                   marginBottom: 10,
-                  background: done ? '#d8e8c4' : 'var(--paper)',
-                  border: '3px solid var(--ink)',
-                  boxShadow: '4px 4px 0 var(--ink)',
+                  background: done ? '#d8e8c4' : (overdue ? '#fbe2d6' : 'var(--paper)'),
+                  borderRadius: 12, border: overdue && !done ? '1.5px solid rgba(201,90,50,0.45)' : '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 6px 14px rgba(42,29,18,0.10)',
                   position: 'relative',
                   overflow: 'hidden',
                 }}>
@@ -827,22 +814,12 @@ function ChoresListScreen({ state, dispatch, onSelect, onAdd }) {
                     zIndex: 2,
                   }}>DONE!</div>
                 )}
-                {overdue && !done && (
-                  <div style={{
-                    position: 'absolute', top: -6, right: -6,
-                    background: 'var(--accent-2)', color: '#fff',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 8, letterSpacing: '0.06em',
-                    padding: '3px 5px',
-                    border: '2px solid var(--ink)',
-                    boxShadow: '2px 2px 0 var(--ink)',
-                  }}>OVERDUE</div>
-                )}
+                {/* overdue state shown via row tint + due text color */}
                 <div style={{
                   width: 44, height: 44,
                   background: 'var(--paper-deep)',
-                  border: '2px solid var(--ink)',
-                  boxShadow: '2px 2px 0 var(--ink)',
+                  borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                  boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 22,
                   flexShrink: 0,
@@ -894,8 +871,8 @@ function ChoreDetailScreen({ chore, state, dispatch, onBack, onEdit }) {
             <div style={{
               width: 56, height: 56,
               background: 'var(--paper-deep)',
-              border: '3px solid var(--ink)',
-              boxShadow: '3px 3px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 28,
             }}>{chore.emoji}</div>
@@ -910,8 +887,8 @@ function ChoreDetailScreen({ chore, state, dispatch, onBack, onEdit }) {
             marginTop: 14,
             padding: 12,
             background: overdue ? '#f4d2c8' : (diff === 0 ? '#f5e9c8' : 'var(--paper)'),
-            border: '3px solid var(--ink)',
-            boxShadow: '3px 3px 0 var(--ink)',
+            borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+            boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
@@ -990,8 +967,8 @@ function ChoreDetailScreen({ chore, state, dispatch, onBack, onEdit }) {
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', marginBottom: 6,
                     background: isToday ? '#fff8d8' : 'var(--paper)',
-                    border: '2px solid var(--ink)',
-                    boxShadow: '2px 2px 0 var(--ink)',
+                    borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                    boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                   }}>
@@ -1017,8 +994,8 @@ function ChoreDetailScreen({ chore, state, dispatch, onBack, onEdit }) {
           <div style={{
             padding: 12,
             background: 'var(--paper)',
-            border: '2px solid var(--ink)',
-            boxShadow: '2px 2px 0 var(--ink)',
+            borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+            boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
             fontFamily: 'var(--font-mono)',
             fontSize: 12, color: 'var(--ink)',
             lineHeight: 1.7,
@@ -1070,8 +1047,8 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
           margin: '0 16px',
           padding: 10,
           background: 'linear-gradient(180deg, #f8e8b5, #f0d896)',
-          border: '3px solid var(--ink)',
-          boxShadow: '4px 4px 0 var(--ink)',
+          borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+          boxShadow: '0 6px 14px rgba(42,29,18,0.10)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', transform: 'scale(0.95)', transformOrigin: 'top center' }}>
             <Room messTier={state.messTier} hairTier={state.hairTier} scale={3.4} mood="happy" />
@@ -1094,15 +1071,15 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
             display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
             gap: 6,
           }}>
-            <div style={{ padding: '6px 4px', background: '#fff8e0', border: '2px solid var(--ink)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
+            <div style={{ padding: '6px 4px', background: '#fff8e0', borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
               <PixCoin size={12} /> {profile.coins}
               <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>COINS</div>
             </div>
-            <div style={{ padding: '6px 4px', background: '#fff8e0', border: '2px solid var(--ink)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
+            <div style={{ padding: '6px 4px', background: '#fff8e0', borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
               💇 LV {state.hairTier}
               <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>HAIR</div>
             </div>
-            <div style={{ padding: '6px 4px', background: '#fff8e0', border: '2px solid var(--ink)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
+            <div style={{ padding: '6px 4px', background: '#fff8e0', borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)' }}>
               ✨ {100 - state.messTier * 25}%
               <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>ROOM</div>
             </div>
@@ -1118,8 +1095,8 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
               <div key={q.id} style={{
                 padding: 12, marginBottom: 8,
                 background: done ? '#e8f0d8' : 'var(--paper)',
-                border: '3px solid var(--ink)',
-                boxShadow: '3px 3px 0 var(--ink)',
+                borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                boxShadow: '0 4px 10px rgba(42,29,18,0.08)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{q.title}</div>
@@ -1149,8 +1126,8 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
             <div key={a.id} style={{
               padding: '10px 6px',
               background: a.unlocked ? 'var(--paper)' : 'var(--paper-deep)',
-              border: '2px solid var(--ink)',
-              boxShadow: '2px 2px 0 var(--ink)',
+              borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+              boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
               textAlign: 'center',
               opacity: a.unlocked ? 1 : 0.5,
               filter: a.unlocked ? 'none' : 'grayscale(1)',
@@ -1188,8 +1165,8 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 12px', marginBottom: 6,
                 background: 'var(--paper)',
-                border: '2px solid var(--ink)',
-                boxShadow: '2px 2px 0 var(--ink)',
+                borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
+                boxShadow: '0 2px 6px rgba(42,29,18,0.06)',
                 fontFamily: 'var(--font-mono)', fontSize: 12,
                 color: 'var(--ink)',
                 cursor: s.edit ? 'pointer' : 'default',
@@ -1228,52 +1205,36 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
 // ─────────────────────────────────────────────────────────────
 function PixTabIcon({ kind, active }) {
   const c = active ? '#fbf3df' : '#2a1d12';
-  // chunky pixel icons
+  const common = {
+    width: 22, height: 22, viewBox: '0 0 24 24',
+    fill: 'none', stroke: c, strokeWidth: 2,
+    strokeLinecap: 'round', strokeLinejoin: 'round',
+  };
   if (kind === 'today') return (
-    <svg className="pixel" width={22} height={22} viewBox="0 0 11 11">
-      <rect x={1} y={2} width={9} height={1} fill={c}/>
-      <rect x={1} y={3} width={1} height={7} fill={c}/>
-      <rect x={9} y={3} width={1} height={7} fill={c}/>
-      <rect x={1} y={9} width={9} height={1} fill={c}/>
-      <rect x={2} y={4} width={2} height={2} fill={c}/>
-      <rect x={5} y={4} width={2} height={2} fill={c}/>
-      <rect x={3} y={1} width={1} height={2} fill={c}/>
-      <rect x={7} y={1} width={1} height={2} fill={c}/>
+    <svg {...common}>
+      <circle cx={12} cy={12} r={4} />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
   if (kind === 'habits') return (
-    <svg className="pixel" width={22} height={22} viewBox="0 0 11 11">
-      <rect x={5} y={1} width={1} height={2} fill={c}/>
-      <rect x={4} y={2} width={3} height={1} fill={c}/>
-      <rect x={2} y={3} width={7} height={1} fill={c}/>
-      <rect x={2} y={4} width={1} height={5} fill={c}/>
-      <rect x={8} y={4} width={1} height={5} fill={c}/>
-      <rect x={3} y={9} width={5} height={1} fill={c}/>
-      <rect x={4} y={5} width={1} height={1} fill={c}/>
-      <rect x={6} y={6} width={1} height={1} fill={c}/>
-      <rect x={5} y={7} width={1} height={1} fill={c}/>
+    <svg {...common}>
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
     </svg>
   );
   if (kind === 'chores') return (
-    <svg className="pixel" width={22} height={22} viewBox="0 0 11 11">
-      <rect x={2} y={1} width={2} height={1} fill={c}/>
-      <rect x={2} y={2} width={1} height={2} fill={c}/>
-      <rect x={3} y={2} width={1} height={1} fill={c}/>
-      <rect x={4} y={3} width={1} height={1} fill={c}/>
-      <rect x={5} y={4} width={1} height={1} fill={c}/>
-      <rect x={6} y={5} width={1} height={1} fill={c}/>
-      <rect x={7} y={6} width={1} height={1} fill={c}/>
-      <rect x={8} y={7} width={1} height={1} fill={c}/>
-      <rect x={6} y={7} width={3} height={3} fill={c}/>
-      <rect x={5} y={8} width={1} height={1} fill={c}/>
+    <svg {...common}>
+      <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+      <path d="M19 14l.7 2.1L22 17l-2.3.9L19 20l-.7-2.1L16 17l2.3-.9L19 14z" />
+      <path d="M5 16l.5 1.5L7 18l-1.5.5L5 20l-.5-1.5L3 18l1.5-.5L5 16z" />
     </svg>
   );
   if (kind === 'character') return (
-    <svg className="pixel" width={22} height={22} viewBox="0 0 11 11">
-      <rect x={4} y={1} width={3} height={1} fill={c}/>
-      <rect x={3} y={2} width={5} height={3} fill={c}/>
-      <rect x={4} y={6} width={3} height={1} fill={c}/>
-      <rect x={2} y={7} width={7} height={3} fill={c}/>
+    <svg {...common}>
+      <circle cx={12} cy={8} r={4} />
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
     </svg>
   );
 }
@@ -1290,7 +1251,7 @@ function BottomTabBar({ active, onChange }) {
       position: 'absolute', bottom: 0, left: 0, right: 0,
       height: 78,
       background: 'var(--paper-deep)',
-      borderTop: '3px solid var(--ink)',
+      borderTop: '1.5px solid rgba(42,29,18,0.18)',
       display: 'flex', alignItems: 'flex-start',
       paddingTop: 6,
       zIndex: 30,
@@ -1312,17 +1273,19 @@ function BottomTabBar({ active, onChange }) {
               cursor: 'pointer',
             }}>
             <div style={{
-              width: 40, height: 40,
+              width: 44, height: 44,
+              borderRadius: 14,
               background: isActive ? 'var(--accent)' : 'transparent',
-              border: isActive ? '2px solid var(--ink)' : '2px solid transparent',
-              boxShadow: isActive ? '2px 2px 0 var(--ink)' : 'none',
+              border: 'none',
+              boxShadow: isActive ? '0 4px 10px rgba(217,111,71,0.35)' : 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s ease, box-shadow 0.15s ease',
             }}>
               <PixTabIcon kind={t.key} active={isActive} />
             </div>
             <div style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 8, letterSpacing: '0.06em',
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
               color: isActive ? 'var(--ink)' : 'var(--ink-soft)',
             }}>{t.label}</div>
           </button>
