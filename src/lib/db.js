@@ -96,6 +96,7 @@ export async function getState() {
       interval: c.interval_n,
       weekdays: c.weekdays || [],
       dayOfMonth: c.day_of_month,
+      reminderTime: c.reminder_time,
       nextDue: c.next_due,
       lastCompleted: c.last_completed_date,
       last3: (compByChore[c.id] || []).slice(0, 3),
@@ -336,6 +337,38 @@ export async function addChore(form) {
     next_due: nextDueFor(shape, today),
     reminder_time: form.reminderTime || null,
   });
+  if (error) throw error;
+  return { state: await getState() };
+}
+
+export async function editHabit(id, form) {
+  const { error } = await supabase.from('dt_habits').update({
+    name: form.name,
+    name_en: form.en || form.nameEn || '',
+    emoji: form.emoji,
+    color: form.color || '#6a9c4a',
+    schedule: form.schedule || 'daily',
+    weekdays: (form.weekdays && form.weekdays.length) ? form.weekdays : [0, 1, 2, 3, 4, 5, 6],
+    reminder_time: form.reminderTime || null,
+  }).eq('id', id);
+  if (error) throw error;
+  return { state: await getState() };
+}
+
+export async function editChore(id, form) {
+  const today = new Date();
+  const shape = { frequency: form.frequency, interval: form.interval || 1, weekdays: form.weekdays || [], dayOfMonth: form.dayOfMonth };
+  const { error } = await supabase.from('dt_chores').update({
+    name: form.name,
+    emoji: form.emoji,
+    notes: form.notes || '',
+    frequency: form.frequency,
+    interval_n: form.interval || 1,
+    weekdays: form.weekdays || [],
+    day_of_month: form.dayOfMonth || null,
+    next_due: nextDueFor(shape, today),
+    reminder_time: form.reminderTime || null,
+  }).eq('id', id);
   if (error) throw error;
   return { state: await getState() };
 }
