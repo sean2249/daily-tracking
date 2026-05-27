@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - claude/household-habits-tracker-Sw8VG
   workflow_dispatch:
 
 permissions:
