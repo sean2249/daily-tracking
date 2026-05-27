@@ -255,7 +255,9 @@ function AddItemModal({ kind, onClose, onSave, existing, onDelete }) {
     schedule: isHabit ? (existing.schedule || 'daily') : null,
     weekdays: existing.weekdays || [0,1,2,3,4,5,6],
     frequency: isHabit ? null : 'daily',
-    interval: existing.interval || 7,
+    // Only carry over the interval when the chore was already a daily/every-N-days
+    // cadence; legacy weekly/monthly intervals aren't in days, so fall back to 7.
+    interval: existing.frequency === 'daily' && existing.interval ? existing.interval : 7,
     dayOfMonth: existing.dayOfMonth || 1,
     reminderTime: existing.reminderTime || '',
     notes: existing.notes || '',
@@ -342,7 +344,7 @@ function AddItemModal({ kind, onClose, onSave, existing, onDelete }) {
                     aspectRatio: '1',
                     fontSize: 17,
                     background: form.emoji === e ? form.color : 'transparent',
-                    border: form.emoji === e ? '1.5px solid rgba(42,29,18,0.18)' : '2px solid transparent',
+                    border: form.emoji === e ? '1.5px solid rgba(42,29,18,0.18)' : '1.5px solid transparent',
                     cursor: 'pointer',
                   }}>{e}</button>
               ))}
