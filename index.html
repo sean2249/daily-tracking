@@ -54,6 +54,17 @@
     --font-display: 'Nunito', system-ui, sans-serif;
     --font-body:    'Nunito', system-ui, sans-serif;
     --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+    /* safe-area insets (0 on desktop; real values on notched phones) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    /* fake status-bar / header top paddings — desktop values; the phone
+       media query below makes these safe-area driven */
+    --status-pad: 52px;
+    --header-pad: 54px;
+    --auth-pad: 72px;
   }
 
   html, body {
@@ -114,24 +125,38 @@
      RWD — fullscreen phone on small viewports
      ───────────────────────────────────────────── */
   @media (max-width: 480px) {
+    /* lock the document to the visible (dynamic) viewport so the page itself
+       never scrolls/bounces — only the inner ScreenScroll list scrolls */
+    html, body {
+      height: 100dvh;
+      overflow: hidden;
+    }
     body {
       padding: 0 !important;
+      padding-left: var(--sal) !important;
+      padding-right: var(--sar) !important;
       background: var(--bg) !important;
       align-items: stretch !important;
       justify-content: stretch !important;
     }
     .phone-stage {
       width: 100% !important;
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100dvh;
     }
     .phone-frame {
-      width: 100vw !important;
-      height: 100vh !important;
+      /* 100% (not 100vw) so it never exceeds the safe visible width under
+         viewport-fit=cover; 100dvh tracks the visible height */
+      width: 100% !important;
       height: 100dvh !important;
       border: none !important;
       border-radius: 0 !important;
       box-shadow: none !important;
+    }
+    /* drive the fake status-bar / header paddings off the real notch inset */
+    :root {
+      --status-pad: calc(var(--sat) + 14px);
+      --header-pad: calc(var(--sat) + 16px);
+      --auth-pad: calc(var(--sat) + 28px);
     }
   }
 

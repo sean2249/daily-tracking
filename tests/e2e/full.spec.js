@@ -86,4 +86,34 @@ test.describe('full live E2E (real Supabase)', () => {
     await page.getByRole('button', { name: 'SAVE', exact: true }).click();
     await expect(page.getByText(new RegExp(NEW_NAME)).first()).toBeVisible();
   });
+
+  // Layout regression guard on the real Today / Chores screens at a phone
+  // viewport: no horizontal overflow (跑版) and the document itself must not
+  // scroll vertically — only the inner ScreenScroll list scrolls. (Chores is
+  // the near-empty screen where the vertical over-scroll was most visible.)
+  test('no layout overflow on Today / Chores at phone viewport', async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto(APP);
+    await page.locator('input[type="email"]').fill(EMAIL);
+    await page.locator('input[type="password"]').fill(PASSWORD);
+    await page.getByRole('button', { name: /SIGN IN/ }).click();
+    await expect(page.getByRole('button', { name: 'CHORES' })).toBeVisible({ timeout: 20_000 });
+
+    const assertNoOverflow = async (label) => {
+      const m = await page.evaluate(() => ({
+        sw: document.documentElement.scrollWidth,
+        iw: window.innerWidth,
+        sh: document.documentElement.scrollHeight,
+        ih: window.innerHeight,
+      }));
+      expect(m.sw, `${label}: horizontal overflow`).toBeLessThanOrEqual(m.iw + 1);
+      expect(m.sh, `${label}: document scrolls vertically`).toBeLessThanOrEqual(m.ih + 1);
+    };
+
+    await assertNoOverflow('Today');
+    await page.getByRole('button', { name: 'CHORES' }).click();
+    await assertNoOverflow('Chores');
+  });
 });

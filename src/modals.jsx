@@ -36,8 +36,8 @@ function OnboardingScreen({ onFinish }) {
         radial-gradient(600px 400px at 50% 18%, #fff3c4 0%, transparent 60%),
         linear-gradient(180deg, #f4dca0 0%, #e6c989 100%)
       `,
-      paddingTop: 64,
-      paddingBottom: 28,
+      paddingTop: 'calc(var(--sat) + 24px)',
+      paddingBottom: 'calc(var(--sab) + 28px)',
     }}>
       <div className="scanlines" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 
@@ -530,7 +530,7 @@ function AchievementModal({ achievement, onClose }) {
   return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
-        width: 280,
+        width: 280, maxWidth: '100%',
         background: 'var(--paper)',
         borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
         boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
@@ -590,7 +590,7 @@ function LevelUpModal({ level, onClose }) {
   return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
-        width: 280, textAlign: 'center',
+        width: 280, maxWidth: '100%', textAlign: 'center',
         background: 'var(--paper)',
         borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
         boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
@@ -627,7 +627,7 @@ function PerfectDayModal({ onClose }) {
   return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
-        width: 300, textAlign: 'center',
+        width: 300, maxWidth: '100%', textAlign: 'center',
         background: 'var(--paper)',
         borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
         boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
@@ -672,7 +672,7 @@ function EditCompletionModal({ chore, oldISO, onClose, onSave, onDelete }) {
   return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
-        width: 320,
+        width: 320, maxWidth: '100%',
         background: 'var(--bg)',
         borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
         boxShadow: '0 12px 32px rgba(42,29,18,0.18)',
@@ -811,7 +811,7 @@ function UndoToast({ toast, onUndo, onDismiss }) {
   return (
     <div style={{
       position: 'absolute',
-      bottom: 92,  // above bottom tab bar
+      bottom: 'calc(92px + var(--sab))',  // above bottom tab bar + home indicator
       left: 16, right: 16,
       zIndex: 150,
       display: 'flex', alignItems: 'center', gap: 10,
