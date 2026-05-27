@@ -77,8 +77,12 @@ test.describe('full live E2E (real Supabase)', () => {
     // ── settings: rename the profile ─────────────────────────
     await page.getByRole('button', { name: 'PIXIE' }).click();
     await page.getByRole('button', { name: /DISPLAY NAME/ }).click();
-    await expect(page.getByText('SETTINGS')).toBeVisible();
-    await page.getByPlaceholder('You').fill(NEW_NAME);
+    // the display-name field only exists inside the Settings modal, so waiting
+    // on it confirms the modal opened (without an ambiguous "SETTINGS" text match
+    // that also hits the Character screen's "Settings" section header).
+    const nameField = page.getByPlaceholder('You');
+    await expect(nameField).toBeVisible();
+    await nameField.fill(NEW_NAME);
     await page.getByRole('button', { name: 'SAVE', exact: true }).click();
     await expect(page.getByText(new RegExp(NEW_NAME)).first()).toBeVisible();
   });
