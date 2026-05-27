@@ -1,7 +1,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 
-// Sends daily reminder pushes. Invoked by pg_cron (every minute) with an
+// Sends daily reminder pushes. Invoked by pg_cron (every 5 minutes) with an
 // 'x-cron-secret' header; not a user-facing endpoint, so JWT verification is
 // off and we authenticate with the shared secret stored in dt_app_config.
 Deno.serve(async (req: Request) => {

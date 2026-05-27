@@ -1,7 +1,8 @@
 -- Schedule the reminder dispatcher: every 5 minutes pg_cron POSTs to the
--- dt-send-reminders Edge Function. The cron secret is read from dt_app_config
--- at call time, so it is never written into the job definition or committed to
--- version control. The function URL uses the (public) project ref.
+-- dt-send-reminders Edge Function. Both the function base URL and the cron
+-- secret are read from dt_app_config at call time, so the job definition is
+-- environment-agnostic and carries no secrets — applying this on a staging or
+-- branch DB targets that environment's function, not production.
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
@@ -14,7 +15,8 @@ select cron.schedule(
   '*/5 * * * *',
   $$
   select net.http_post(
-    url := 'https://xwqgrpfcuohpstqinkxb.supabase.co/functions/v1/dt-send-reminders',
+    url := (select rtrim(function_base_url, '/') || '/dt-send-reminders'
+              from public.dt_app_config where id = 1),
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'x-cron-secret', (select cron_secret from public.dt_app_config where id = 1)

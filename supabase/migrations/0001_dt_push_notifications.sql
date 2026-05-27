@@ -42,18 +42,22 @@ drop policy if exists dt_notif_log_owner on public.dt_notification_log;
 create policy dt_notif_log_owner on public.dt_notification_log
   for select using (user_id = auth.uid());
 
--- ── App config (server-only secrets) ────────────────────────────────────────
--- Single row (id = 1) holding the VAPID keypair + subject and the cron shared
--- secret. RLS is enabled with NO policy on purpose: only the service role can
--- read it, so the private VAPID key and cron secret are never exposed to
--- clients. Secret values are seeded out-of-band (kept out of version control).
+-- ── App config (server-only secrets + per-env settings) ─────────────────────
+-- Single row (id = 1) holding the VAPID keypair + subject, the cron shared
+-- secret, and the project's Edge Function base URL (so the cron job targets the
+-- right environment — see 0002). RLS is enabled with NO policy on purpose: only
+-- the service role can read it, so the private VAPID key and cron secret are
+-- never exposed to clients. These values are environment-specific and seeded
+-- out-of-band (kept out of version control); function_base_url is e.g.
+-- 'https://<project-ref>.supabase.co/functions/v1'.
 create table if not exists public.dt_app_config (
-  id            integer primary key default 1 check (id = 1),
-  vapid_public  text,
-  vapid_private text,
-  vapid_subject text,
-  cron_secret   text,
-  updated_at    timestamptz not null default now()
+  id                integer primary key default 1 check (id = 1),
+  vapid_public      text,
+  vapid_private     text,
+  vapid_subject     text,
+  cron_secret       text,
+  function_base_url text,
+  updated_at        timestamptz not null default now()
 );
 
 alter table public.dt_app_config enable row level security;
@@ -75,8 +79,12 @@ as $function$
     select p.user_id, (p_now at time zone p.timezone) as lt, p.mess_tier
     from dt_profiles p
     where p.reminder_enabled
-      and (p_now at time zone p.timezone)::time >= p.reminder_time
-      and (p_now at time zone p.timezone)::time <  (p.reminder_time + interval '5 minutes')
+      -- Anchor reminder_time to the local date so the 5-minute window is a
+      -- timestamp range that crosses midnight correctly. (Bare `time + interval`
+      -- wraps modulo 24h, which made a near-midnight reminder window
+      -- unsatisfiable, e.g. 23:55 → [23:55, 00:00) never matched.)
+      and (p_now at time zone p.timezone) >= ((p_now at time zone p.timezone)::date + p.reminder_time)
+      and (p_now at time zone p.timezone) <  ((p_now at time zone p.timezone)::date + p.reminder_time + interval '5 minutes')
   ),
   counts as (
     select d.user_id, (d.lt)::date as ref_date, d.mess_tier, d.lt,
