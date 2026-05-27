@@ -1,0 +1,6 @@
+project_id = "xwqgrpfcuohpstqinkxb"
+
+# Reminder dispatcher: called by pg_cron with a shared secret in an
+# 'x-cron-secret' header (not an end-user endpoint), so JWT verification is off.
+[functions.dt-send-reminders]
+verify_jwt = false

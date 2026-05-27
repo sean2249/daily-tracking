@@ -28,6 +28,12 @@ room that gets messy with overdue chores, achievements, and quests).
 - `src/data.jsx` — **pure logic** (date math, XP curve, schedule/next-due
   computation) + demo sample data. This is the most test-worthy code.
 - `src/lib/{supabase,config,push}.js` — client init, public env config, Web Push.
+- `supabase/` — version-controlled backend for daily reminder push: the
+  `dt-send-reminders` Edge Function, migrations for the push tables + the
+  `dt_admin_due_reminders` RPC, and the `pg_cron` job that fires the function
+  every 5 min. The live objects already exist on the project; these files
+  reproduce them (no secrets — the VAPID keypair / cron secret live only in the
+  service-role-only `dt_app_config` table).
 
 **Data model / security:** tables are prefixed `dt_` (`dt_profiles`,
 `dt_habits`, `dt_habit_completions`, `dt_chores`, `dt_chore_completions`,
@@ -38,7 +44,9 @@ policy keyed on `user_id = auth.uid()`, and `user_id` columns default to
 Caveat: the database also contains a set of unused `SECURITY DEFINER` RPCs
 (`dt_save_habit`, `dt_toggle_habit`, `dt_bootstrap`, a "household" concept, …)
 from a different design — **the current client does not call them.** Don't
-assume they reflect live behaviour.
+assume they reflect live behaviour. (The one RPC that *is* live is
+`dt_admin_due_reminders`, called by the `dt-send-reminders` Edge Function — see
+`supabase/`.)
 
 ## Commands
 
