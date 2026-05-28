@@ -104,16 +104,33 @@ test.describe('full live E2E (real Supabase)', () => {
     const assertNoOverflow = async (label) => {
       const m = await page.evaluate(() => ({
         sw: document.documentElement.scrollWidth,
+        // documentElement.scrollWidth is clipped by the html/body overflow:hidden
+        // lock and hides a phone-frame wider than the viewport; body's scrollWidth
+        // still reflects it, so assert on both.
+        bsw: document.body.scrollWidth,
         iw: window.innerWidth,
         sh: document.documentElement.scrollHeight,
         ih: window.innerHeight,
       }));
       expect(m.sw, `${label}: horizontal overflow`).toBeLessThanOrEqual(m.iw + 1);
+      expect(m.bsw, `${label}: frame overflow (跑版)`).toBeLessThanOrEqual(m.iw + 1);
       expect(m.sh, `${label}: document scrolls vertically`).toBeLessThanOrEqual(m.ih + 1);
     };
 
     await assertNoOverflow('Today');
     await page.getByRole('button', { name: 'CHORES' }).click();
     await assertNoOverflow('Chores');
+
+    // Opening a chore detail and returning must not leave the layout shifted
+    // (the 跑版 bug this guard was added for). Uses the chore created earlier
+    // in this run; skips gracefully if it isn't present.
+    if (await page.getByText(CHORE).count()) {
+      await page.getByText(CHORE).first().click();
+      await expect(page.getByRole('button', { name: 'MARK AS DONE' })).toBeVisible();
+      await assertNoOverflow('Chore detail');
+      await page.getByRole('button', { name: /BACK/ }).click();
+      await expect(page.getByRole('button', { name: '+ NEW' })).toBeVisible();
+      await assertNoOverflow('Chores after BACK');
+    }
   });
 });
