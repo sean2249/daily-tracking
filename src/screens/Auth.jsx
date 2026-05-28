@@ -98,6 +98,7 @@ export function AuthScreen() {
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
       alignItems: 'center',
+      overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       background: `
         radial-gradient(600px 400px at 50% 16%, #fff3c4 0%, transparent 60%),
         linear-gradient(180deg, #f4dca0 0%, #e6c989 100%)

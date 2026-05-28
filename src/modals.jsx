@@ -32,6 +32,7 @@ function OnboardingScreen({ onFinish }) {
   return (
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
+      overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       background: `
         radial-gradient(600px 400px at 50% 18%, #fff3c4 0%, transparent 60%),
         linear-gradient(180deg, #f4dca0 0%, #e6c989 100%)
