@@ -45,10 +45,14 @@ for (const vp of mobileViewports) {
       innerWidth: window.innerWidth,
       scrollHeight: document.documentElement.scrollHeight,
       innerHeight: window.innerHeight,
+      frameWidth: document.querySelector('.phone-frame')?.getBoundingClientRect().width ?? 0,
     }));
 
     // ±1px tolerance for sub-pixel rounding.
     expect(metrics.scrollWidth, 'horizontal overflow (跑版)').toBeLessThanOrEqual(metrics.innerWidth + 1);
     expect(metrics.scrollHeight, 'document scrolls vertically').toBeLessThanOrEqual(metrics.innerHeight + 1);
+    // The phone frame must FILL the viewport width — not shrink-wrap to its
+    // content and leave dead space on the right (the width-collapse 跑版).
+    expect(metrics.frameWidth, 'phone frame narrower than viewport').toBeGreaterThanOrEqual(metrics.innerWidth - 1);
   });
 }
