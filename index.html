@@ -139,6 +139,13 @@
       align-items: stretch !important;
       justify-content: stretch !important;
     }
+    /* the React mount is a flex child of body with no intrinsic width, so it
+       shrink-wraps to content; pin it to the viewport so the width:100% chain
+       below (stage → frame) fills the screen instead of collapsing */
+    #root {
+      width: 100%;
+      height: 100dvh;
+    }
     .phone-stage {
       width: 100% !important;
       height: 100dvh;
