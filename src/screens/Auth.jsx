@@ -98,11 +98,12 @@ export function AuthScreen() {
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
       alignItems: 'center',
+      overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       background: `
         radial-gradient(600px 400px at 50% 16%, #fff3c4 0%, transparent 60%),
         linear-gradient(180deg, #f4dca0 0%, #e6c989 100%)
       `,
-      padding: '72px 24px 28px', position: 'relative',
+      padding: 'var(--auth-pad) 24px calc(var(--sab) + 28px)', position: 'relative',
     }}>
       <div className="scanlines" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 

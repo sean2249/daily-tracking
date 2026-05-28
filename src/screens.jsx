@@ -23,7 +23,10 @@ function ScreenScroll({ children, padBottom = 100, style = {} }) {
       flex: 1,
       overflowY: 'auto',
       overflowX: 'hidden',
-      paddingBottom: padBottom,
+      // clear the tab bar + the home-indicator safe area
+      paddingBottom: typeof padBottom === 'number'
+        ? `calc(${padBottom}px + var(--sab))`
+        : padBottom,
       WebkitOverflowScrolling: 'touch',
       ...style,
     }}>
@@ -73,7 +76,7 @@ function PixBadge({ children, bg = 'var(--gold)', color = 'var(--ink)', size = 1
 function ScreenHeader({ title, subtitle, right }) {
   return (
     <div style={{
-      padding: '54px 18px 10px',
+      padding: 'var(--header-pad) 18px 10px',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
       gap: 10,
     }}>
@@ -175,6 +178,7 @@ function TaskRow({ icon, name, sub, badge, checked, color, onCheck, dim = false,
 function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
   const { profile, habits, chores, questsDaily } = state;
   const todayDow = new Date().getDay();
+  const narrow = typeof window !== 'undefined' && window.innerWidth <= 380;
 
   const todayHabits = habits.filter(h => h.weekdays.includes(todayDow));
   const todayChores = chores.filter(c => {
@@ -193,7 +197,7 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
   const Hero = ({ compact }) => (
     <div style={{
       position: 'relative',
-      padding: compact ? '52px 14px 18px' : '52px 12px 20px',
+      padding: compact ? 'var(--status-pad) 14px 18px' : 'var(--status-pad) 12px 20px',
       background: `
         linear-gradient(180deg, #f8e8b5 0%, #f0d896 100%)
       `,
@@ -227,7 +231,7 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
           messTier={state.messTier}
           hairTier={state.hairTier}
           mood={allDone ? 'happy' : (state.messTier >= 2 ? 'sad' : 'smile')}
-          scale={compact ? 1.85 : 3.0}
+          scale={compact ? (narrow ? 1.7 : 1.85) : (narrow ? 2.6 : 3.0)}
           bobChar={true}
         />
       </div>
@@ -265,7 +269,7 @@ function TodayScreen({ state, dispatch, layout = 'hybrid' }) {
           const done = q.progress >= q.target;
           return (
             <div key={q.id} style={{
-              flex: '0 0 170px',
+              flex: '0 0 clamp(150px, 46%, 180px)',
               padding: 10,
               background: done ? '#e8f0d8' : 'var(--paper)',
               borderRadius: 12, border: '1.5px solid rgba(42,29,18,0.18)',
@@ -647,7 +651,7 @@ function HabitDetailScreen({ habit, state, dispatch, onBack, onEdit }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{
-        padding: '52px 14px 8px',
+        padding: 'var(--status-pad) 14px 8px',
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
         <button className="px-btn ghost" onClick={onBack} style={{ padding: '6px 10px', fontSize: 11 }}>← BACK</button>
@@ -860,7 +864,7 @@ function ChoreDetailScreen({ chore, state, dispatch, onBack, onEdit }) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '52px 14px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ padding: 'var(--status-pad) 14px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <button className="px-btn ghost" onClick={onBack} style={{ padding: '6px 10px', fontSize: 11 }}>← BACK</button>
         <div style={{ flex: 1 }} />
         <button className="px-btn ghost" onClick={onEdit} style={{ padding: '6px 10px', fontSize: 11 }}>EDIT</button>
@@ -1036,6 +1040,7 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
   const xpAtLevel = xpForLevel(profile.level);
   const unlocked = achievements.filter(a => a.unlocked);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const narrow = typeof window !== 'undefined' && window.innerWidth <= 380;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1051,7 +1056,7 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
           boxShadow: '0 6px 14px rgba(42,29,18,0.10)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', transform: 'scale(0.95)', transformOrigin: 'top center' }}>
-            <Room messTier={state.messTier} hairTier={state.hairTier} scale={3.4} mood="happy" />
+            <Room messTier={state.messTier} hairTier={state.hairTier} scale={narrow ? 2.8 : 3.4} mood="happy" />
           </div>
 
           {/* HUD */}
@@ -1119,7 +1124,7 @@ function CharacterScreen({ state, dispatch, onSignOut }) {
         }>Achievements</SectionHeader>
         <div style={{
           padding: '0 16px',
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
           gap: 8,
         }}>
           {achievements.map(a => (
@@ -1249,7 +1254,8 @@ function BottomTabBar({ active, onChange }) {
   return (
     <div style={{
       position: 'absolute', bottom: 0, left: 0, right: 0,
-      height: 78,
+      height: 'calc(78px + var(--sab))',
+      paddingBottom: 'var(--sab)',
       background: 'var(--paper-deep)',
       borderTop: '1.5px solid rgba(42,29,18,0.18)',
       display: 'flex', alignItems: 'flex-start',

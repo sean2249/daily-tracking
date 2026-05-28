@@ -21,3 +21,34 @@ test('app boots to the sign-in screen without crashing', async ({ page }) => {
     `uncaught page errors:\n${pageErrors.map((e) => e.stack || String(e)).join('\n')}`,
   ).toHaveLength(0);
 });
+
+// Layout regression guard: on phone-sized viewports the app shell must neither
+// overflow horizontally (跑版 / clipped edges) nor let the document scroll
+// vertically (only the inner ScreenScroll list scrolls). The smoke test runs
+// offline, so this exercises the Auth/PIXIE shell — same phone-frame + media
+// query that every screen uses. (env(safe-area-inset-*) resolve to 0 in
+// headless Chromium, so this validates the 100vw→100% / document-lock fixes,
+// not the visual notch padding.)
+const mobileViewports = [
+  { width: 390, height: 844 }, // iPhone 12/13/14-class
+  { width: 360, height: 740 }, // common small Android
+];
+
+for (const vp of mobileViewports) {
+  test(`no horizontal/vertical document overflow at ${vp.width}x${vp.height}`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await page.goto(APP);
+    await expect(page.getByText('PIXIE', { exact: true })).toBeVisible();
+
+    const metrics = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+    }));
+
+    // ±1px tolerance for sub-pixel rounding.
+    expect(metrics.scrollWidth, 'horizontal overflow (跑版)').toBeLessThanOrEqual(metrics.innerWidth + 1);
+    expect(metrics.scrollHeight, 'document scrolls vertically').toBeLessThanOrEqual(metrics.innerHeight + 1);
+  });
+}
