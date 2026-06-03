@@ -1,6 +1,6 @@
 import React from 'react';
 import { supabase } from '../lib/supabase.js';
-import { Avatar } from '../pixel.jsx';
+import { SCALES } from '../data.jsx';
 
 // Where Supabase should send users after they click an email confirmation /
 // recovery link. Must match this app's deployed path (GitHub Pages serves it
@@ -23,28 +23,32 @@ function readAuthErrorFromUrl() {
   return desc || 'Sign-in link could not be used. Please try again.';
 }
 
+function BrandMark() {
+  const c = SCALES.green.c;
+  const sq = (bg) => <span style={{ width: 13, height: 13, borderRadius: 4, background: bg, display: 'block' }} />;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+        {sq(c[2])}{sq(c[4])}{sq(c[3])}{sq(c[1])}
+      </div>
+      <span style={{ fontFamily: 'var(--font)', fontWeight: 700, fontSize: 27, letterSpacing: '-0.03em', color: 'var(--text)' }}>Daily</span>
+    </div>
+  );
+}
+
 function Field({ label, type, value, onChange, placeholder, onEnter }) {
   return (
     <label style={{ display: 'block' }}>
-      <div style={{
-        fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.08em',
-        color: 'var(--ink-soft)', marginBottom: 4,
-      }}>{label.toUpperCase()}</div>
+      <div className="field-label">{label}</div>
       <input
         type={type}
         value={value}
-        onChange={e => onChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && onEnter) onEnter(); }}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(); }}
         placeholder={placeholder}
         autoCapitalize="none"
         autoCorrect="off"
-        style={{
-          width: '100%', padding: '10px 12px',
-          fontFamily: 'var(--font-body)', fontSize: 15,
-          background: 'var(--paper)', color: 'var(--ink)',
-          border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
-          outline: 'none', boxSizing: 'border-box',
-        }}
+        className="text-input"
       />
     </label>
   );
@@ -57,8 +61,6 @@ export function AuthScreen() {
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState(null); // { kind: 'error'|'info', text }
 
-  // Surface an error carried back in the URL (e.g. an expired confirmation link
-  // redirected here as #error=...&error_code=otp_expired), then clean the URL.
   React.useEffect(() => {
     const text = readAuthErrorFromUrl();
     if (text) {
@@ -95,65 +97,46 @@ export function AuthScreen() {
   };
 
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center',
-      overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: `
-        radial-gradient(600px 400px at 50% 16%, #fff3c4 0%, transparent 60%),
-        linear-gradient(180deg, #f4dca0 0%, #e6c989 100%)
-      `,
-      padding: 'var(--auth-pad) 24px calc(var(--sab) + 28px)', position: 'relative',
-    }}>
-      <div className="scanlines" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
-
-      <div style={{ animation: 'bob 2s ease-in-out infinite' }}>
-        <Avatar hairTier={0} mood="happy" scale={4} />
-      </div>
+    <div className="screen" style={{ justifyContent: 'center' }}>
       <div style={{
-        fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--ink)',
-        letterSpacing: '0.04em', marginTop: 12,
-      }}>PIXIE</div>
-      <div style={{
-        fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--ink-soft)',
-        letterSpacing: '0.12em', marginTop: 4,
-      }}>DAILY · 我的每日</div>
-
-      <div style={{ width: '100%', maxWidth: 300, marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" onEnter={submit} />
-        <Field label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" onEnter={submit} />
-
-        {msg && (
-          <div style={{
-            fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.4,
-            padding: '8px 10px',
-            color: msg.kind === 'error' ? '#fff' : 'var(--ink)',
-            background: msg.kind === 'error' ? 'var(--accent-2)' : 'var(--paper)',
-            border: '2px solid var(--ink)', boxShadow: '2px 2px 0 var(--ink)',
-          }}>{msg.text}</div>
-        )}
-
-        <button className="px-btn" onClick={submit} disabled={busy}
-          style={{ marginTop: 4, padding: 14, fontSize: 14, opacity: busy ? 0.7 : 1 }}>
-          {busy ? '···' : (mode === 'signup' ? '▶ CREATE ACCOUNT' : '▶ SIGN IN')}
-        </button>
-
-        <button
-          onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMsg(null); }}
-          style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font-display)', fontSize: 10, letterSpacing: '0.06em',
-            color: 'var(--ink-soft)', marginTop: 2,
-          }}>
-          {mode === 'signup' ? 'HAVE AN ACCOUNT? SIGN IN' : 'NEW HERE? CREATE ACCOUNT'}
-        </button>
-      </div>
-
-      <div style={{
-        fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--ink-soft)',
-        textAlign: 'center', marginTop: 'auto', maxWidth: 260, lineHeight: 1.4,
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 26, padding: 'calc(var(--safe-top) + 40px) 28px calc(28px + env(safe-area-inset-bottom))',
       }}>
-        Your habits and chores stay private to your account.
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <BrandMark />
+          <div style={{ fontFamily: 'var(--font)', fontSize: 14, color: 'var(--text-2)' }}>Habit &amp; principle tracker</div>
+        </div>
+
+        <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" onEnter={submit} />
+          <Field label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" onEnter={submit} />
+
+          {msg && (
+            <div style={{
+              fontFamily: 'var(--font)', fontSize: 13.5, lineHeight: 1.45, padding: '11px 13px', borderRadius: 12,
+              color: msg.kind === 'error' ? '#fff' : 'var(--text)',
+              background: msg.kind === 'error' ? '#d4493f' : 'var(--surface-2)',
+              border: msg.kind === 'error' ? 'none' : '1px solid var(--border)',
+            }}>{msg.text}</div>
+          )}
+
+          <button className="btn-block btn-fill" onClick={submit} disabled={busy} style={{ marginTop: 4, opacity: busy ? 0.7 : 1 }}>
+            {busy ? '···' : (mode === 'signup' ? 'Create account' : 'Sign in')}
+          </button>
+
+          <button
+            onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMsg(null); }}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, color: 'var(--text-2)', marginTop: 2,
+            }}>
+            {mode === 'signup' ? 'Have an account? Sign in' : 'New here? Create account'}
+          </button>
+        </div>
+
+        <div style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'var(--text-3)', textAlign: 'center', maxWidth: 260, lineHeight: 1.4 }}>
+          Your habits and principles stay private to your account.
+        </div>
       </div>
     </div>
   );

@@ -1,287 +1,274 @@
-// app.jsx — Main shell: auth session, data loading, async action routing.
+// app.jsx — shell: auth session, data load, navigation stack, and all
+// create/edit/archive/restore/delete flows with optimistic writes + toast/undo.
 
 import React from 'react';
 import { supabase } from './lib/supabase.js';
 import * as db from './lib/db.js';
-import { isoDate } from './data.jsx';
-import { Confetti } from './pixel.jsx';
-import {
-  TodayScreen, HabitsListScreen, HabitDetailScreen,
-  ChoresListScreen, ChoreDetailScreen, CharacterScreen, BottomTabBar,
-} from './screens.jsx';
-import {
-  AddItemModal, AchievementModal, LevelUpModal, PerfectDayModal, UndoToast,
-} from './modals.jsx';
 import { AuthScreen } from './screens/Auth.jsx';
+import { todayYMD, activeItemsOn } from './data.jsx';
+import { TodayBoard, CalendarPage, DetailPage } from './pages.jsx';
+import { ItemSheet, ConfirmDialog, Toast } from './ui.jsx';
+import { AddIcon } from './icons.jsx';
 
-const todayISO = () => isoDate(new Date());
+const MAX_ACTIVE = 7;
 
-// Fixed app config (the prototype's Tweaks panel is gone; these are the defaults).
-const TWEAKS = { todayLayout: 'hybrid', palette: 'warm', appName: 'Pixie', scanlines: true };
+// Fixed shipping theme (the prototype's Tweaks panel is gone). Tokens are baked
+// into styles.css :root; this only drives the per-screen layout variants.
+const THEME = { palette: 'green', todayLayout: 'minimal', checkFeel: 'crisp', calDensity: 'cozy', detailHero: 'big' };
 
-const PALETTES = {
-  warm:  { bg: '#f0e2c0', paper: '#fbf3df', accent: '#d96f47', wall: '#f4dca0', subtitle: 'warm cozy · terracotta' },
-  cool:  { bg: '#dce7e5', paper: '#f3f9f7', accent: '#4d8aa0', wall: '#c8dfd8', subtitle: 'cool calm · slate teal' },
-  pastel:{ bg: '#f0dcec', paper: '#fbe9f3', accent: '#d97a8f', wall: '#f5d0dc', subtitle: 'soft pastel · rose lilac' },
-  sun:   { bg: '#fde7a8', paper: '#fff5cc', accent: '#e89020', wall: '#f4d875', subtitle: 'playful · sunny coral' },
-  night: { bg: '#2b2540', paper: '#3a3158', accent: '#e5a93a', wall: '#3a3158', subtitle: 'dark cozy · amber on night' },
-};
-
-function applyPalette(name) {
-  const p = PALETTES[name] || PALETTES.warm;
-  const root = document.documentElement;
-  root.style.setProperty('--bg', p.bg);
-  root.style.setProperty('--paper', p.paper);
-  root.style.setProperty('--accent', p.accent);
-  root.style.setProperty('--wall', p.wall);
-  root.style.setProperty('--ink', '#2a1d12');
-  root.style.setProperty('--ink-soft', '#5d4632');
-  root.style.setProperty('--paper-deep', '#f5e9c8');
-  root.style.setProperty('--bg-deep', '#e6d4a8');
+function newId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'id_' + Math.random().toString(36).slice(2, 12);
 }
 
-// Simple full-phone status view (loading / error)
-function CenterView({ title, subtitle, action }) {
+class ErrorBoundary extends React.Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  render() {
+    if (this.state.err) {
+      return <pre style={{ padding: 40, color: '#b00', fontSize: 12, whiteSpace: 'pre-wrap' }}>{String((this.state.err && this.state.err.stack) || this.state.err)}</pre>;
+    }
+    return this.props.children;
+  }
+}
+
+function CenterSplash({ text }) {
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 10, padding: 32,
-      background: 'var(--bg)', textAlign: 'center',
-    }}>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink)' }}>{title}</div>
-      {subtitle && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.4 }}>{subtitle}</div>}
-      {action}
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontFamily: 'var(--font)', fontSize: 14 }}>
+      {text}
     </div>
   );
 }
 
-function App() {
-  React.useEffect(() => { applyPalette(TWEAKS.palette); }, []);
+export function App() {
+  const today = todayYMD();
 
-  // auth session: undefined = checking, null = signed out, object = signed in
+  // auth: undefined = checking, null = signed out, object = signed in
   const [session, setSession] = React.useState(undefined);
+
+  // working data + its async load state
+  const [state, setState] = React.useState({ items: [], logs: [] });
+  const [dataState, setDataState] = React.useState('loading'); // 'loading' | 'live' | 'error'
+  const stateRef = React.useRef(state);
+  React.useEffect(() => { stateRef.current = state; }, [state]);
+
+  // navigation stack
+  const [stack, setStack] = React.useState([{ p: 'today' }]);
+  const cur = stack[stack.length - 1];
+  const push = (p, params) => setStack((s) => [...s, { p, ...params }]);
+  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+  const goToday = () => setStack([{ p: 'today' }]);
+
+  // ephemeral UI
+  const [expanded, setExpanded] = React.useState(() => new Set([today]));
+  const [flashId, setFlashId] = React.useState(null);
+  const [sheet, setSheet] = React.useState({ open: false, mode: 'create', itemId: null, name: '', type: 'habits' });
+  const [confirm, setConfirm] = React.useState({ open: false });
+  const [toast, setToast] = React.useState(null);
+  const toastTimer = React.useRef(null);
+
+  // ---- auth subscription ----
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // loaded app data from the database
-  const [data, setData] = React.useState(null);
-  const [loadError, setLoadError] = React.useState(null);
-
-  // ephemeral UI state
-  const [tab, setTab] = React.useState('today');
-  const [habitDetailId, setHabitDetailId] = React.useState(null);
-  const [choreDetailId, setChoreDetailId] = React.useState(null);
-  const [addModal, setAddModal] = React.useState(null);
-  const [editModal, setEditModal] = React.useState(null);
-  const [pendingAchievement, setPendingAchievement] = React.useState(null);
-  const [pendingLevelUp, setPendingLevelUp] = React.useState(null);
-  const [pendingPerfectDay, setPendingPerfectDay] = React.useState(false);
-  const [confetti, setConfetti] = React.useState(false);
-  const [activeCheck, setActiveCheck] = React.useState(null);
-  const [undoToast, setUndoToast] = React.useState(null);
-
-  // load data whenever the signed-in user changes
+  // ---- data load (drives loading -> live / error) ----
+  const load = React.useCallback(() => {
+    setDataState('loading');
+    db.getState()
+      .then((s) => { setState(s); setDataState('live'); })
+      .catch((e) => { console.error('load failed', e); setDataState('error'); });
+  }, []);
   React.useEffect(() => {
-    let cancelled = false;
-    if (session) {
-      setData(null); setLoadError(null);
-      db.getState()
-        .then(s => { if (!cancelled) setData(s); })
-        .catch(e => { if (!cancelled) setLoadError(e?.message || String(e)); });
-    } else {
-      setData(null);
-    }
-    return () => { cancelled = true; };
+    if (session) load();
+    else setState({ items: [], logs: [] });
   }, [session?.user?.id]);
 
-  React.useEffect(() => {
-    if (activeCheck) { const t = setTimeout(() => setActiveCheck(null), 700); return () => clearTimeout(t); }
-  }, [activeCheck]);
-  React.useEffect(() => {
-    if (confetti) { const t = setTimeout(() => setConfetti(false), 2800); return () => clearTimeout(t); }
-  }, [confetti]);
+  // ---- toast (single slot, 3s) ----
+  function showToast(msg, undo) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, undo, id: Math.random() });
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  }
+  const toastApi = { show: showToast };
+  function runUndo() {
+    if (toast && toast.undo) toast.undo();
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(null);
+  }
 
-  // Reconcile detail selections when the underlying item disappears (e.g. after a
-  // delete or a reload). Done in an effect rather than during render to avoid
-  // setState-while-rendering warnings and render loops.
-  React.useEffect(() => {
-    if (!data) return;
-    if (habitDetailId && !data.habits.some(h => h.id === habitDetailId)) setHabitDetailId(null);
-    if (choreDetailId && !data.chores.some(c => c.id === choreDetailId)) setChoreDetailId(null);
-  }, [data, habitDetailId, choreDetailId]);
+  // ---- optimistic mutation: apply locally now, persist in background,
+  //      resync from the server + toast if it fails ----
+  function commit(applyFn, op, errMsg) {
+    setState(applyFn);
+    Promise.resolve().then(op).catch((e) => {
+      console.error('mutation failed', e);
+      showToast(errMsg, null);
+      load();
+    });
+  }
 
-  const applyResult = (res) => {
-    if (res && res.state) setData(res.state);
-    if (res && res.leveledUp) setPendingLevelUp(res.leveledUp);
-    if (res && res.newAchievements && res.newAchievements.length) setPendingAchievement(res.newAchievements[0]);
+  const api = {
+    addItem(name, type) {
+      const id = newId();
+      const item = { id, name: name.trim(), type, status: 'active', start_date: today, archive_date: null };
+      commit((s) => ({ ...s, items: [...s.items, item] }), () => db.addItem(item), "Couldn't add. Try again.");
+      return id;
+    },
+    renameItem(id, name) {
+      const nm = name.trim();
+      commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, name: nm } : it)) }), () => db.renameItem(id, nm), "Couldn't save the name.");
+    },
+    toggle(itemId, date) {
+      const ex = stateRef.current.logs.find((l) => l.item_id === itemId && l.date === date);
+      const newVal = ex ? !ex.is_completed : true;
+      commit(
+        (s) => {
+          const e2 = s.logs.find((l) => l.item_id === itemId && l.date === date);
+          const logs = e2
+            ? s.logs.map((l) => (l === e2 ? { ...l, is_completed: !l.is_completed } : l))
+            : [...s.logs, { id: newId(), item_id: itemId, date, is_completed: true }];
+          return { ...s, logs };
+        },
+        () => db.toggle(itemId, date, newVal),
+        "Couldn't save your check-in.",
+      );
+    },
+    archive(id) {
+      commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, status: 'archived', archive_date: today } : it)) }), () => db.archive(id, today), "Couldn't archive.");
+    },
+    restore(id) {
+      commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, status: 'active', archive_date: null } : it)) }), () => db.restore(id), "Couldn't restore.");
+    },
+    remove(id) {
+      commit((s) => ({ items: s.items.filter((it) => it.id !== id), logs: s.logs.filter((l) => l.item_id !== id) }), () => db.remove(id), "Couldn't delete.");
+    },
   };
 
-  const dispatch = async (action) => {
-    try {
-      switch (action.type) {
-        case 'TOGGLE_HABIT': {
-          setActiveCheck(action.id);
-          const habit = data && data.habits.find(h => h.id === action.id);
-          const wasDone = habit && habit.completions.has(todayISO());
-          const res = await db.toggleHabit(action.id);
-          applyResult(res);
-          if (!wasDone && Math.random() < 0.2) setConfetti(true);
-          break;
-        }
-        case 'COMPLETE_CHORE': {
-          setActiveCheck(action.id);
-          const res = await db.completeChore(action.id);
-          applyResult(res);
-          if (res.undo) setUndoToast({ ...res.undo, ts: Date.now() });
-          break;
-        }
-        case 'UNDO_LAST_CHORE': { setUndoToast(null); applyResult(await db.undoChore(action.id)); break; }
-        case 'EDIT_COMPLETION': { applyResult(await db.editChoreCompletion(action.id, action.oldISO, action.newISO)); break; }
-        case 'ADD_HABIT': { applyResult(await db.addHabit(action.form)); break; }
-        case 'ADD_CHORE': { applyResult(await db.addChore(action.form)); break; }
-        case 'EDIT_HABIT': { applyResult(await db.editHabit(action.id, action.form)); break; }
-        case 'EDIT_CHORE': { applyResult(await db.editChore(action.id, action.form)); break; }
-        case 'SAVE_SETTINGS': { applyResult(await db.saveSettings(action.patch)); break; }
-        case 'DELETE_HABIT': { applyResult(await db.deleteHabit(action.id)); setHabitDetailId(null); break; }
-        case 'DELETE_CHORE': { applyResult(await db.deleteChore(action.id)); setChoreDetailId(null); break; }
-        case 'CLEAR_CHECK_ANIM': setActiveCheck(null); break;
-        case 'CLEAR_CONFETTI': setConfetti(false); break;
-        case 'DISMISS_ACHIEVEMENT': setPendingAchievement(null); break;
-        case 'DISMISS_LEVELUP': setPendingLevelUp(null); break;
-        case 'DISMISS_PERFECT': setPendingPerfectDay(false); break;
-        case 'TRIGGER_PERFECT': setPendingPerfectDay(true); setConfetti(true); break;
-        default: break;
-      }
-    } catch (e) {
-      console.error('action failed', action, e);
-      setLoadError(e?.message || String(e));
-    }
-  };
+  const activeCount = state.items.filter((i) => i.status === 'active').length;
+  const activeTodayCount = activeItemsOn(state.items, today).length;
 
-  const renderScreen = (screenState) => {
-    if (tab === 'today') {
-      return <TodayScreen state={screenState} dispatch={dispatch} layout={TWEAKS.todayLayout} />;
-    }
-    if (tab === 'habits') {
-      if (habitDetailId) {
-        const h = screenState.habits.find(x => x.id === habitDetailId);
-        if (!h) return null; // effect above clears the stale id
-        return <HabitDetailScreen habit={h} state={screenState} dispatch={dispatch}
-          onBack={() => setHabitDetailId(null)} onEdit={() => setEditModal({ kind: 'habit', id: h.id })} />;
-      }
-      return <HabitsListScreen state={screenState} dispatch={dispatch}
-        onSelect={setHabitDetailId} onAdd={() => setAddModal('habit')} />;
-    }
-    if (tab === 'chores') {
-      if (choreDetailId) {
-        const c = screenState.chores.find(x => x.id === choreDetailId);
-        if (!c) return null; // effect above clears the stale id
-        return <ChoreDetailScreen chore={c} state={screenState} dispatch={dispatch}
-          onBack={() => setChoreDetailId(null)} onEdit={() => setEditModal({ kind: 'chore', id: c.id })} />;
-      }
-      return <ChoresListScreen state={screenState} dispatch={dispatch}
-        onSelect={setChoreDetailId} onAdd={() => setAddModal('chore')} />;
-    }
-    if (tab === 'character') {
-      return <CharacterScreen state={screenState} dispatch={dispatch}
-        onSignOut={() => supabase.auth.signOut()} />;
-    }
-    return null;
-  };
+  // ---- name uniqueness (active items, case-insensitive) ----
+  function nameTaken(name, isEdit) {
+    const n = name.trim().toLowerCase();
+    const exclude = isEdit ? sheet.itemId : null;
+    return state.items.some((it) => it.status === 'active' && it.id !== exclude && it.name.trim().toLowerCase() === n);
+  }
 
-  // Decide the phone body
+  // ---- flows ----
+  function requestAdd() {
+    if (activeCount >= MAX_ACTIVE) {
+      showToast("You've reached the limit of 7 active items. Archive one to add a new challenge.", null);
+      return;
+    }
+    setSheet({ open: true, mode: 'create', itemId: null, name: '', type: 'habits' });
+  }
+  function onSheetSave(name, type) {
+    if (sheet.mode === 'create') {
+      const id = api.addItem(name, type);
+      setSheet((sh) => ({ ...sh, open: false }));
+      setExpanded((e) => new Set(e).add(today));
+      goToday();
+      setFlashId(id);
+      setTimeout(() => setFlashId(null), 1600);
+      showToast('Added.', null);
+    } else {
+      api.renameItem(sheet.itemId, name);
+      setSheet((sh) => ({ ...sh, open: false }));
+      showToast('Saved.', null);
+    }
+  }
+  function requestEdit(item) {
+    if (!item) return;
+    setSheet({ open: true, mode: 'edit', itemId: item.id, name: item.name, type: item.type });
+  }
+  function requestArchive(item) {
+    if (!item) return;
+    api.archive(item.id);
+    goToday();
+    showToast('Archived. Find it in the calendar.', () => api.restore(item.id));
+  }
+  function requestDelete(item) {
+    if (!item) return;
+    setConfirm({
+      open: true, danger: true, confirmLabel: 'Delete',
+      title: 'Delete ' + item.name + '?',
+      body: "Deleting this removes all its past check-in data permanently. This can't be undone.",
+      onConfirm: () => { setConfirm({ open: false }); api.remove(item.id); goToday(); },
+    });
+  }
+  function requestRestore(item) {
+    if (!item) return;
+    if (activeCount >= MAX_ACTIVE) {
+      showToast("You've reached the limit of 7 active items. Archive one before restoring.", null);
+      return;
+    }
+    const n = item.name.trim().toLowerCase();
+    if (state.items.some((it) => it.status === 'active' && it.name.trim().toLowerCase() === n)) {
+      showToast('An item with this name already exists. Rename before restoring.', null);
+      return;
+    }
+    api.restore(item.id);
+    goToday();
+    showToast('Restored.', null);
+  }
+
+  const showFab = cur.p === 'today' && activeTodayCount > 0;
+  const curItem = () => state.items.find((i) => i.id === cur.itemId);
+
+  // ---- body ----
   let body;
   if (session === undefined) {
-    body = <CenterView title="···" subtitle="Waking Pixie up…" />;
+    body = <CenterSplash text="Loading…" />;
   } else if (!session) {
     body = <AuthScreen />;
-  } else if (loadError) {
-    body = <CenterView
-      title="Couldn't load your data"
-      subtitle={loadError}
-      action={<button className="px-btn" style={{ marginTop: 6 }}
-        onClick={() => { setLoadError(null); db.getState().then(setData).catch(e => setLoadError(e?.message || String(e))); }}>
-        RETRY
-      </button>} />;
-  } else if (!data) {
-    body = <CenterView title="LOADING" subtitle="Tidying your room…" />;
   } else {
-    const screenState = { ...data, activeCheck };
     body = (
-      <>
-        {renderScreen(screenState)}
-        <BottomTabBar active={tab} onChange={(t) => { setTab(t); setHabitDetailId(null); setChoreDetailId(null); }} />
+      <React.Fragment>
+        <ErrorBoundary>
+          {cur.p === 'today' && (
+            <TodayBoard state={state} api={api} t={THEME} expanded={expanded} setExpanded={setExpanded}
+              flashId={flashId} toast={toastApi} dataState={dataState} onRetry={load}
+              onOpenItem={(id) => push('detail', { itemId: id })}
+              onOpenCalendar={() => push('calendar')}
+              onAddRequest={requestAdd} />
+          )}
+          {cur.p === 'calendar' && (
+            <CalendarPage state={state} t={THEME} onBack={back} dataState={dataState} onRetry={load}
+              onOpenItem={(id) => push('detail', { itemId: id })} />
+          )}
+          {cur.p === 'detail' && (
+            <DetailPage itemId={cur.itemId} state={state} t={THEME} onBack={back}
+              dataState={dataState} onRetry={load}
+              requestEdit={() => requestEdit(curItem())}
+              requestArchive={() => requestArchive(curItem())}
+              requestDelete={() => requestDelete(curItem())}
+              requestRestore={() => requestRestore(curItem())} />
+          )}
+        </ErrorBoundary>
 
-        <Confetti show={confetti} />
+        {showFab && (
+          <button className="fab" aria-label="New challenge" onClick={requestAdd}><AddIcon size={26} /></button>
+        )}
 
-        {undoToast && (
-          <UndoToast toast={undoToast}
-            onUndo={(id) => dispatch({ type: 'UNDO_LAST_CHORE', id })}
-            onDismiss={() => setUndoToast(null)} />
-        )}
-        {addModal && (
-          <AddItemModal kind={addModal}
-            onClose={() => setAddModal(null)}
-            onSave={(form) => { setAddModal(null); dispatch({ type: addModal === 'habit' ? 'ADD_HABIT' : 'ADD_CHORE', form }); }} />
-        )}
-        {editModal && (() => {
-          const existing = editModal.kind === 'habit'
-            ? data.habits.find(h => h.id === editModal.id)
-            : data.chores.find(c => c.id === editModal.id);
-          if (!existing) return null;
-          return (
-            <AddItemModal kind={editModal.kind} existing={existing}
-              onClose={() => setEditModal(null)}
-              onSave={(form) => { setEditModal(null); dispatch({ type: editModal.kind === 'habit' ? 'EDIT_HABIT' : 'EDIT_CHORE', id: editModal.id, form }); }}
-              onDelete={() => { setEditModal(null); dispatch({ type: editModal.kind === 'habit' ? 'DELETE_HABIT' : 'DELETE_CHORE', id: editModal.id }); }} />
-          );
-        })()}
-        {pendingAchievement && (
-          <AchievementModal achievement={pendingAchievement} onClose={() => setPendingAchievement(null)} />
-        )}
-        {pendingLevelUp && (
-          <LevelUpModal level={pendingLevelUp} onClose={() => setPendingLevelUp(null)} />
-        )}
-        {pendingPerfectDay && (
-          <PerfectDayModal onClose={() => setPendingPerfectDay(false)} />
-        )}
-      </>
+        <ItemSheet open={sheet.open} mode={sheet.mode} initialName={sheet.name} initialType={sheet.type}
+          nameTaken={nameTaken} onSave={onSheetSave} onClose={() => setSheet((sh) => ({ ...sh, open: false }))} />
+
+        <ConfirmDialog open={confirm.open} title={confirm.title} body={confirm.body}
+          confirmLabel={confirm.confirmLabel} danger={confirm.danger}
+          onConfirm={confirm.onConfirm} onCancel={() => setConfirm({ open: false })} />
+
+        <Toast toast={toast} onUndo={runUndo} />
+      </React.Fragment>
     );
   }
 
-  const phoneInner = (
-    <div style={{
-      width: '100%', height: '100%', position: 'relative',
-      background: 'var(--bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-    }}>
-      {TWEAKS.scanlines && (
-        <div className="scanlines" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 80 }} />
-      )}
-      {body}
-    </div>
-  );
-
   return (
-    <div style={{ position: 'relative' }}>
-      <div className="phone-stage" style={{ display: 'flex', justifyContent: 'center' }}>
-        <div className="phone-frame" style={{
-          width: 402,
-          height: 874,
-          background: 'var(--bg)',
-          border: '1.5px solid rgba(42,29,18,0.12)',
-          borderRadius: 32,
-          boxShadow: '0 24px 60px rgba(42,29,18,0.18), 0 4px 12px rgba(42,29,18,0.06)',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
-          {phoneInner}
-        </div>
-      </div>
+    <div className="app-root">
+      <div className="app-shell">{body}</div>
     </div>
   );
 }
-
-export { App };
