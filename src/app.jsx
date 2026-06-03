@@ -52,6 +52,10 @@ export function App() {
   const [dataState, setDataState] = React.useState('loading'); // 'loading' | 'live' | 'error'
   const stateRef = React.useRef(state);
   React.useEffect(() => { stateRef.current = state; }, [state]);
+  // Synchronous mirror of logs so rapid repeat toggles chain off the latest
+  // value instead of a stale render-time read.
+  const logsRef = React.useRef(state.logs);
+  React.useEffect(() => { logsRef.current = state.logs; }, [state.logs]);
 
   // navigation stack
   const [stack, setStack] = React.useState([{ p: 'today' }]);
@@ -122,21 +126,24 @@ export function App() {
       const nm = name.trim();
       commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, name: nm } : it)) }), () => db.renameItem(id, nm), "Couldn't save the name.");
     },
-    // `desired` is the explicit target completion value, supplied by the caller
-    // from the same state read that decides the toast — so the local change and
-    // the persisted value can't diverge under rapid toggles.
-    toggle(itemId, date, desired) {
-      commit(
-        (s) => {
-          const ex = s.logs.find((l) => l.item_id === itemId && l.date === date);
-          const logs = ex
-            ? s.logs.map((l) => (l === ex ? { ...l, is_completed: desired } : l))
-            : [...s.logs, { id: newId(), item_id: itemId, date, is_completed: desired }];
-          return { ...s, logs };
-        },
-        () => db.toggle(itemId, date, desired),
-        "Couldn't save your check-in.",
-      );
+    // Flip from the synchronous logs mirror so two fast clicks on the same item
+    // chain correctly (the 2nd reads the 1st's result, not a stale render-time
+    // value), and persist the exact resulting value. Returns the new completion
+    // state so the caller can pick the right toast.
+    toggle(itemId, date) {
+      const ex = logsRef.current.find((l) => l.item_id === itemId && l.date === date);
+      const desired = ex ? !ex.is_completed : true;
+      const nextLogs = ex
+        ? logsRef.current.map((l) => (l === ex ? { ...l, is_completed: desired } : l))
+        : [...logsRef.current, { id: newId(), item_id: itemId, date, is_completed: desired }];
+      logsRef.current = nextLogs;
+      setState((s) => ({ ...s, logs: nextLogs }));
+      Promise.resolve().then(() => db.toggle(itemId, date, desired)).catch((e) => {
+        console.error('mutation failed', e);
+        showToast("Couldn't save your check-in.", null);
+        load();
+      });
+      return desired;
     },
     archive(id) {
       commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, status: 'archived', archive_date: today } : it)) }), () => db.archive(id, today), "Couldn't archive.");

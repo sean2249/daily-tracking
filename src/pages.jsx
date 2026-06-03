@@ -138,9 +138,8 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
   const layout = t.todayLayout; // 'cards' | 'minimal'
 
   function onToggleWithToast(id, d) {
-    const wasDone = isDone(logIdx, id, d);
-    api.toggle(id, d, !wasDone);
-    toast.show(wasDone ? 'Check-in removed.' : 'Saved.', () => api.toggle(id, d, wasDone));
+    const nowDone = api.toggle(id, d);
+    toast.show(nowDone ? 'Saved.' : 'Check-in removed.', () => api.toggle(id, d));
   }
 
   function DayRow({ date }) {

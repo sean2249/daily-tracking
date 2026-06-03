@@ -38,7 +38,7 @@ export function ItemSheet({ open, mode, initialName, initialType, nameTaken, onS
   }, [open]);
 
   const trimmed = name.trim();
-  const over = name.length > 10;
+  const over = trimmed.length > 10; // judge by the value that's actually saved (trimmed)
   const canSave = trimmed.length > 0 && !over;
 
   function submit() {
@@ -62,7 +62,7 @@ export function ItemSheet({ open, mode, initialName, initialType, nameTaken, onS
           placeholder="e.g. Read 30 minutes" enterKeyHint="done"
           onChange={(e) => { setName(e.target.value); setErr(''); }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }} />
-        <div className={'charcount' + (over ? ' over' : '')}>{name.length}/10</div>
+        <div className={'charcount' + (over ? ' over' : '')}>{trimmed.length}/10</div>
 
         {mode !== 'edit' && (
           <div style={{ marginTop: 8 }}>

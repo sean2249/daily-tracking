@@ -6,7 +6,13 @@ drop policy if exists dt_item_logs_owner on public.dt_item_logs;
 
 create policy dt_item_logs_owner on public.dt_item_logs
   for all
-  using (user_id = auth.uid())
+  using (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.dt_items i
+      where i.id = dt_item_logs.item_id and i.user_id = auth.uid()
+    )
+  )
   with check (
     user_id = auth.uid()
     and exists (
