@@ -1,324 +1,207 @@
-// data.jsx — sample data + state helpers + date utilities
+// data.jsx — pure model + completion/streak math.
+// Single source of truth so the Today board, Calendar, and Detail page agree.
+// Deliberately free of React/storage so it stays unit-testable; all functions
+// take explicit args (never read `new Date()` implicitly except todayYMD()).
+//
+// Model:
+//   item = { id, name, type:'habits'|'principles', status:'active'|'archived',
+//            start_date:'YYYY-MM-DD', archive_date:'YYYY-MM-DD'|null }
+//   log  = { id, item_id, date:'YYYY-MM-DD', is_completed:boolean }
 
-// ─────────────────────────────────────────────────────────────
-// DATE HELPERS
-// ─────────────────────────────────────────────────────────────
-const DAY_MS = 24 * 60 * 60 * 1000;
+// ---------- date helpers (local time, YYYY-MM-DD strings) ----------
+export function pad(n) { return n < 10 ? '0' + n : '' + n; }
+export function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+export function parseYMD(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+export function todayYMD() { return ymd(new Date()); }
+export function addDays(s, n) { const d = parseYMD(s); d.setDate(d.getDate() + n); return ymd(d); }
+export function dow(s) { return parseYMD(s).getDay(); } // 0=Sun
 
-function isoDate(d) {
-  // YYYY-MM-DD
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+export const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const MON_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function fmtTopDate(s) { const d = parseYMD(s); return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()); }
+export function fmtMonDay(s) { const d = parseYMD(s); return MON_SHORT[d.getMonth()] + ' ' + d.getDate(); }
+export function fmtSlash(s) { const d = parseYMD(s); return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()); }
+
+// relative day label for the 7-day board
+export function relLabel(s, today) {
+  if (s === today) return 'Today';
+  if (s === addDays(today, -1)) return 'Yesterday';
+  return DOW_SHORT[dow(s)];
 }
 
-function parseISO(s) {
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function dayDiff(a, b) {
-  // calendar-day diff, ignoring time
-  const A = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
-  const B = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
-  return Math.round((A - B) / DAY_MS);
-}
-
-function fmtMonthDay(d) {
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-// Build a completion history string-set from a recipe like {weeklyHits: 0.85, weeks: 14}
-function buildHistory({ days = 60, prob = 0.8, gapWeeks = 0, today = new Date() }) {
-  const hits = new Set();
-  for (let i = 1; i <= days; i++) {  // skip today (i=0) by default
-    const d = addDays(today, -i);
-    // simulate a brief lapse window mid-history
-    const inGap = gapWeeks > 0 && i > 14 && i < 14 + gapWeeks * 7;
-    if (inGap) continue;
-    if (Math.random() < prob) hits.add(isoDate(d));
-  }
-  return hits;
-}
-
-// ─────────────────────────────────────────────────────────────
-// SAMPLE DATA — using the user's content (Traditional Chinese)
-// ─────────────────────────────────────────────────────────────
-const TODAY = new Date();
-const TODAY_ISO = isoDate(TODAY);
-
-// Use a deterministic seed-free history but stable for the demo
-function deterministicHistory(seed, days = 90) {
-  const hits = new Set();
-  let s = seed;
-  for (let i = 1; i <= days; i++) {
-    // simple LCG
-    s = (s * 9301 + 49297) % 233280;
-    const r = s / 233280;
-    if (r < 0.78) {
-      const d = addDays(TODAY, -i);
-      hits.add(isoDate(d));
-    }
-  }
-  return hits;
-}
-
-const SAMPLE_HABITS = [
-  {
-    id: 'h-meditate',
-    name: '靜坐',
-    nameEn: 'Meditate',
-    emoji: '🧘',
-    color: '#9989c5',
-    schedule: 'daily',  // every day
-    weekdays: [0,1,2,3,4,5,6],
-    reminderTime: '07:00',
-    streak: 12,
-    longestStreak: 21,
-    totalCompletions: 64,
-    completions: deterministicHistory(13, 90),
-  },
-  {
-    id: 'h-music',
-    name: '聽音樂',
-    nameEn: 'Listen to music',
-    emoji: '🎵',
-    color: '#d97a8f',
-    schedule: 'daily',
-    weekdays: [0,1,2,3,4,5,6],
-    reminderTime: null,
-    streak: 3,
-    longestStreak: 18,
-    totalCompletions: 41,
-    completions: deterministicHistory(47, 90),
-  },
-  {
-    id: 'h-read',
-    name: '閱讀',
-    nameEn: 'Read',
-    emoji: '📖',
-    color: '#6a9c4a',
-    schedule: 'weekdays',
-    weekdays: [1,2,3,4,5],
-    reminderTime: '21:30',
-    streak: 5,
-    longestStreak: 11,
-    totalCompletions: 28,
-    completions: deterministicHistory(101, 90),
-  },
-];
-
-// Mark today completed for one of the habits (to seed "in progress" today)
-SAMPLE_HABITS[1].completions.add(TODAY_ISO); // 聽音樂 done today
-
-const SAMPLE_CHORES = [
-  {
-    id: 'c-clean',
-    name: '打掃房間',
-    nameEn: 'Clean the room',
-    emoji: '🧹',
-    notes: 'Vacuum + dust desk + tidy',
-    frequency: 'weekly',
-    interval: 1,
-    weekdays: [6],  // Saturday
-    dayOfMonth: null,
-    nextDue: isoDate(addDays(TODAY, -1)),   // overdue by 1 day
-    lastCompleted: isoDate(addDays(TODAY, -8)),
-    last3: [
-      addDays(TODAY, -8),
-      addDays(TODAY, -15),
-      addDays(TODAY, -22),
-    ].map(isoDate),
-    totalCompletions: 9,
-    overdue: true,
-  },
-  {
-    id: 'c-razor',
-    name: '更換刮鬍刀',
-    nameEn: 'Change razor blade',
-    emoji: '🪒',
-    notes: '',
-    frequency: 'monthly',
-    interval: 1,
-    dayOfMonth: 1,
-    nextDue: isoDate(addDays(TODAY, 4)),
-    lastCompleted: isoDate(addDays(TODAY, -26)),
-    last3: [
-      addDays(TODAY, -26),
-      addDays(TODAY, -57),
-      addDays(TODAY, -88),
-    ].map(isoDate),
-    totalCompletions: 3,
-    overdue: false,
-  },
-  {
-    id: 'c-trash',
-    name: '倒垃圾',
-    nameEn: 'Take out trash',
-    emoji: '🗑️',
-    notes: 'Mon + Thu evening',
-    frequency: 'weekly',
-    interval: 1,
-    weekdays: [1, 4],
-    nextDue: TODAY_ISO,  // due today
-    lastCompleted: isoDate(addDays(TODAY, -3)),
-    last3: [
-      addDays(TODAY, -3),
-      addDays(TODAY, -7),
-      addDays(TODAY, -10),
-    ].map(isoDate),
-    totalCompletions: 18,
-    overdue: false,
-  },
-  {
-    id: 'c-wash',
-    name: '洗衣服',
-    nameEn: 'Wash clothes',
-    emoji: '🧺',
-    notes: '',
-    frequency: 'weekly',
-    interval: 1,
-    weekdays: [0],  // Sunday
-    nextDue: isoDate(addDays(TODAY, 2)),
-    lastCompleted: isoDate(addDays(TODAY, -5)),
-    last3: [
-      addDays(TODAY, -5),
-      addDays(TODAY, -12),
-      addDays(TODAY, -19),
-    ].map(isoDate),
-    totalCompletions: 11,
-    overdue: false,
-  },
-  {
-    id: 'c-collect',
-    name: '收衣服',
-    nameEn: 'Bring in laundry',
-    emoji: '👕',
-    notes: 'After sunset',
-    frequency: 'weekly',
-    interval: 1,
-    weekdays: [0],
-    nextDue: TODAY_ISO,
-    lastCompleted: isoDate(addDays(TODAY, -7)),
-    last3: [
-      addDays(TODAY, -7),
-      addDays(TODAY, -14),
-      addDays(TODAY, -21),
-    ].map(isoDate),
-    totalCompletions: 9,
-    overdue: false,
-  },
-];
-
-const SAMPLE_ACHIEVEMENTS = [
-  { id: 'first_habit',    title: 'First Steps',    desc: 'Create your first habit', emoji: '🌱', unlocked: true,  unlockedAt: '2025-08-12' },
-  { id: 'streak_7',       title: 'Lucky Seven',    desc: 'Reach a 7-day streak',     emoji: '🔥', unlocked: true,  unlockedAt: '2025-09-04' },
-  { id: 'streak_30',      title: 'Iron Will',      desc: 'Reach a 30-day streak',    emoji: '💎', unlocked: false },
-  { id: 'habit_total_50', title: 'Half Century',   desc: '50 habit check-ins',       emoji: '🏅', unlocked: true,  unlockedAt: '2025-10-22' },
-  { id: 'chore_master_10',title: 'House Hero',     desc: 'Complete 10 chores',       emoji: '🧹', unlocked: true,  unlockedAt: '2025-10-30' },
-  { id: 'perfect_day',    title: 'Perfect Day',    desc: 'All habits + all chores',  emoji: '⭐', unlocked: false },
-  { id: 'level_5',        title: 'Level 5',        desc: 'Reach level 5',            emoji: '🎖️', unlocked: false },
-  { id: 'spotless_week',  title: 'Spotless Week',  desc: '7 days of a clean room',   emoji: '✨', unlocked: false },
-];
-
-const SAMPLE_QUESTS_DAILY = [
-  { id: 'q-2habits', title: 'Check off 2 habits', progress: 1, target: 2, xp: 25, coins: 5 },
-  { id: 'q-1chore',  title: 'Finish 1 chore',     progress: 0, target: 1, xp: 30, coins: 10 },
-  { id: 'q-tidy',    title: 'Keep room above 50% tidy', progress: 1, target: 1, xp: 20, coins: 5 },
-];
-
-const SAMPLE_QUESTS_WEEKLY = [
-  { id: 'wq-checkins', title: '20 habit check-ins this week', progress: 11, target: 20, xp: 100, coins: 25 },
-  { id: 'wq-overdue',  title: 'Zero overdue chores',          progress: 0,  target: 1,  xp: 80,  coins: 20 },
-];
-
-// ─────────────────────────────────────────────────────────────
-// XP / Level
-// ─────────────────────────────────────────────────────────────
-function levelFromXP(totalXP) {
-  // n such that 50 * n^2 <= xp
-  let n = 0;
-  while (50 * (n + 1) * (n + 1) <= totalXP) n++;
-  return Math.max(1, n);
-}
-function xpForLevel(n) { return 50 * n * n; }
-
-// ─────────────────────────────────────────────────────────────
-// SCHEDULE HELPERS
-// ─────────────────────────────────────────────────────────────
-function isHabitScheduledOn(habit, date) {
-  const dow = date.getDay();  // 0=Sun
-  return habit.weekdays.includes(dow);
-}
-
-function chorelDueText(chore, today = TODAY) {
-  const due = parseISO(chore.nextDue);
-  const diff = dayDiff(due, today);
-  if (diff < 0) return `${-diff}d overdue`;
-  if (diff === 0) return 'Due today';
-  if (diff === 1) return 'Due tomorrow';
-  if (diff < 7) return `Due in ${diff}d`;
-  return `Due ${fmtMonthDay(due)}`;
-}
-
-function scheduleSummary(habit) {
-  if (habit.schedule === 'daily') return 'Every day';
-  if (habit.schedule === 'weekdays') return 'Weekdays';
-  const dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  return habit.weekdays.map(d => dn[d]).join(' ');
-}
-
-function cadenceSummary(chore) {
-  if (chore.frequency === 'daily') return chore.interval === 1 ? 'Every day' : `Every ${chore.interval}d`;
-  if (chore.frequency === 'weekly') {
-    const dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const days = chore.weekdays.map(d => dn[d]).join(' ');
-    return chore.interval === 1 ? days : `Every ${chore.interval}w · ${days}`;
-  }
-  if (chore.frequency === 'monthly') return `Monthly · day ${chore.dayOfMonth}`;
-  return '—';
-}
-
-// Compute next due date given a chore's frequency config, starting from `from`.
-function nextDueFor(chore, from = new Date()) {
-  if (chore.frequency === 'daily') {
-    return isoDate(addDays(from, chore.interval || 1));
-  }
-  if (chore.frequency === 'weekly') {
-    const wds = (chore.weekdays && chore.weekdays.length) ? chore.weekdays : [from.getDay()];
-    // find the next day in `from + 1..14` whose dow is in wds, biased by interval (weeks)
-    const intv = chore.interval || 1;
-    for (let i = 1; i <= 7 * intv + 7; i++) {
-      const d = addDays(from, i);
-      if (wds.includes(d.getDay())) {
-        // for interval > 1, skip occurrences in earlier weeks until interval*7 days reached
-        if (intv === 1 || i >= 7 * (intv - 1)) return isoDate(d);
-      }
-    }
-    return isoDate(addDays(from, 7));
-  }
-  if (chore.frequency === 'monthly') {
-    const dom = chore.dayOfMonth || 1;
-    const d = new Date(from.getFullYear(), from.getMonth(), dom);
-    if (d <= from) d.setMonth(d.getMonth() + (chore.interval || 1));
-    return isoDate(d);
-  }
-  return isoDate(addDays(from, 1));
-}
-
-export {
-  DAY_MS, isoDate, parseISO, addDays, dayDiff, fmtMonthDay,
-  buildHistory, deterministicHistory,
-  SAMPLE_HABITS, SAMPLE_CHORES, SAMPLE_ACHIEVEMENTS,
-  SAMPLE_QUESTS_DAILY, SAMPLE_QUESTS_WEEKLY,
-  levelFromXP, xpForLevel,
-  isHabitScheduledOn, chorelDueText, scheduleSummary, cadenceSummary, nextDueFor,
-  TODAY, TODAY_ISO,
+// ---------- completion color scales ----------
+export const SCALES = {
+  green: { name: 'GitHub green', c: ['#EBEDF0', '#9BE9A8', '#40C463', '#30A14E', '#216E39'] },
+  ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#BBD6F2', '#74A9E8', '#3B6FD4', '#1B3F8F'] },
+  plum: { name: 'Plum', c: ['#EFEAF2', '#D9BCE6', '#B97FCE', '#9447B0', '#5E2178'] },
 };
+
+// pct 0..100 -> 0..4 index into a completion scale
+export function bucket(pct) {
+  if (pct === 0) return 0;
+  if (pct < 34) return 1;
+  if (pct < 67) return 2;
+  if (pct < 100) return 3;
+  return 4;
+}
+
+// ---------- item time-window ----------
+// item is "tracked" on day s  iff  start_date <= s < archive_date (exclusive)
+export function itemActiveOn(item, s) {
+  if (item.status === 'deleted') return false;
+  if (s < item.start_date) return false;
+  if (item.archive_date && s >= item.archive_date) return false;
+  return true;
+}
+export function activeItemsOn(items, s) { return items.filter((it) => itemActiveOn(it, s)); }
+
+// ---------- log index ----------
+export function makeLogIndex(logs) {
+  const m = new Map();
+  for (const l of logs) m.set(l.item_id + '|' + l.date, l.is_completed);
+  return m;
+}
+export function isDone(logIdx, itemId, date) { return logIdx.get(itemId + '|' + date) === true; }
+
+// ---------- day completion ----------
+// returns { denom, num, pct } ; denom 0 (pct null) = no-tracking day
+export function dayCompletion(items, logIdx, s) {
+  const act = activeItemsOn(items, s);
+  if (act.length === 0) return { denom: 0, num: 0, pct: null };
+  let num = 0;
+  for (const it of act) if (isDone(logIdx, it.id, s)) num++;
+  return { denom: act.length, num, pct: Math.round((num / act.length) * 100) };
+}
+
+// earliest start among all non-deleted items (lower bound for streak walks)
+export function earliestStart(items) {
+  let e = null;
+  for (const it of items) {
+    if (it.status === 'deleted') continue;
+    if (e === null || it.start_date < e) e = it.start_date;
+  }
+  return e;
+}
+
+// ---------- per-item current streak ----------
+// Today is treated as pending (skipped, not breaking) for active items.
+export function itemCurrentStreak(item, logIdx, today) {
+  if (item.status === 'deleted') return 0;
+  let end = today;
+  let countToday = true;
+  if (item.status === 'archived' && item.archive_date) {
+    end = addDays(item.archive_date, -1); // last determined active day
+    countToday = false;
+  }
+  let streak = 0;
+  let d = end;
+  if (countToday) {
+    if (isDone(logIdx, item.id, d)) streak++;
+    d = addDays(d, -1);
+  }
+  while (d >= item.start_date) {
+    if (isDone(logIdx, item.id, d)) { streak++; d = addDays(d, -1); }
+    else break;
+  }
+  return streak;
+}
+
+// longest run of completed days within the item's determined window
+export function itemLongestStreak(item, logIdx, today) {
+  if (item.status === 'deleted') return 0;
+  const last = item.status === 'archived' && item.archive_date
+    ? addDays(item.archive_date, -1)
+    : (isDone(logIdx, item.id, today) ? today : addDays(today, -1));
+  let best = 0, run = 0, d = item.start_date;
+  while (d <= last) {
+    if (isDone(logIdx, item.id, d)) { run++; if (run > best) best = run; }
+    else run = 0;
+    d = addDays(d, 1);
+  }
+  return best;
+}
+
+// completion rate: completed determined days / total determined days (excl. today)
+export function itemCompletion(item, logIdx, today) {
+  const last = item.status === 'archived' && item.archive_date
+    ? addDays(item.archive_date, -1)
+    : addDays(today, -1);
+  if (last < item.start_date) return null; // no determined days yet
+  let done = 0, total = 0, d = item.start_date;
+  while (d <= last) { total++; if (isDone(logIdx, item.id, d)) done++; d = addDays(d, 1); }
+  if (total === 0) return null;
+  return Math.round((done / total) * 100);
+}
+
+export function itemTotalDone(item, logs) {
+  return logs.filter((l) => l.item_id === item.id && l.is_completed).length;
+}
+
+// ---------- full combo streak (calendar header) ----------
+// Consecutive days where every tracked item hit 100%. Today counts only if
+// already 100% (else skipped, not broken); no-tracking days are skipped too.
+export function fullComboStreak(items, logIdx, today) {
+  const floor = earliestStart(items);
+  if (!floor) return 0;
+  let streak = 0;
+  const t = dayCompletion(items, logIdx, today);
+  if (t.denom > 0 && t.pct === 100) streak++;
+  let d = addDays(today, -1);
+  while (d >= floor) {
+    const c = dayCompletion(items, logIdx, d);
+    if (c.denom === 0) { d = addDays(d, -1); continue; } // no-tracking day: skip
+    if (c.pct === 100) { streak++; d = addDays(d, -1); }
+    else break;
+  }
+  return streak;
+}
+
+// ---------- demo seed (dev only — not on the production data path) ----------
+function seedUid() { return 'id_' + Math.random().toString(36).slice(2, 10); }
+
+export function makeSeed() {
+  const today = todayYMD();
+  const start = addDays(today, -72);
+  const defs = [
+    { name: 'Read 30 minutes', type: 'habits', p: 0.82, off: 0 },
+    { name: 'Meditate', type: 'habits', p: 0.74, off: 5 },
+    { name: 'Free writing', type: 'habits', p: 0.55, off: 12 },
+    { name: 'No added sugar', type: 'principles', p: 0.7, off: 0 },
+    { name: 'No phone at meals', type: 'principles', p: 0.6, off: 20 },
+  ];
+  const items = defs.map((d) => ({
+    id: seedUid(), name: d.name, type: d.type, status: 'active',
+    start_date: addDays(start, d.off), archive_date: null,
+  }));
+  const archived = {
+    id: seedUid(), name: 'Cold shower', type: 'habits', status: 'archived',
+    start_date: addDays(start, 3), archive_date: addDays(today, -16),
+  };
+  items.push(archived);
+
+  const logs = [];
+  const all = [...defs.map((d, i) => ({ it: items[i], p: d.p })), { it: archived, p: 0.65 }];
+  for (const { it, p } of all) {
+    let d = it.start_date;
+    const end = it.archive_date ? addDays(it.archive_date, -1) : addDays(today, -1);
+    let momentum = p;
+    while (d <= end) {
+      momentum += (Math.random() - 0.5) * 0.18;
+      momentum = Math.max(0.15, Math.min(0.97, momentum * 0.7 + p * 0.3));
+      if (Math.random() < momentum) logs.push({ id: seedUid(), item_id: it.id, date: d, is_completed: true });
+      d = addDays(d, 1);
+    }
+  }
+  for (const it of items) {
+    if (it.status !== 'active') continue;
+    for (let k = 1; k <= 4; k++) {
+      const dd = addDays(today, -k);
+      if (dd >= it.start_date && !logs.find((l) => l.item_id === it.id && l.date === dd))
+        logs.push({ id: seedUid(), item_id: it.id, date: dd, is_completed: true });
+    }
+  }
+  logs.push({ id: seedUid(), item_id: items[0].id, date: today, is_completed: true });
+  logs.push({ id: seedUid(), item_id: items[3].id, date: today, is_completed: true });
+  return { items, logs };
+}
