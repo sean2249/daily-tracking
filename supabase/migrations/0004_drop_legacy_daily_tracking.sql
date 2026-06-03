@@ -3,8 +3,14 @@
 -- Leaves the new tables intact and never touches other apps in this shared
 -- project (commute*, restaurants, mood_logs, telegram_sessions, recommendation_logs).
 
--- 1) stop the orphaned reminder cron (daily-tracking's job only)
-select cron.unschedule('dt-send-reminders');
+-- 1) stop the orphaned reminder cron (daily-tracking's job only).
+-- Guarded so it's a no-op on a fresh project where pg_cron / the job is absent.
+do $$
+begin
+  perform cron.unschedule('dt-send-reminders');
+exception when others then
+  null; -- cron schema/function missing or job not scheduled: nothing to do
+end $$;
 
 -- 2) drop legacy tables (CASCADE clears their RLS policies + FKs)
 drop table if exists public.dt_notification_log cascade;

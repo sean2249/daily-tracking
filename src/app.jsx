@@ -122,18 +122,19 @@ export function App() {
       const nm = name.trim();
       commit((s) => ({ ...s, items: s.items.map((it) => (it.id === id ? { ...it, name: nm } : it)) }), () => db.renameItem(id, nm), "Couldn't save the name.");
     },
-    toggle(itemId, date) {
-      const ex = stateRef.current.logs.find((l) => l.item_id === itemId && l.date === date);
-      const newVal = ex ? !ex.is_completed : true;
+    // `desired` is the explicit target completion value, supplied by the caller
+    // from the same state read that decides the toast — so the local change and
+    // the persisted value can't diverge under rapid toggles.
+    toggle(itemId, date, desired) {
       commit(
         (s) => {
-          const e2 = s.logs.find((l) => l.item_id === itemId && l.date === date);
-          const logs = e2
-            ? s.logs.map((l) => (l === e2 ? { ...l, is_completed: !l.is_completed } : l))
-            : [...s.logs, { id: newId(), item_id: itemId, date, is_completed: true }];
+          const ex = s.logs.find((l) => l.item_id === itemId && l.date === date);
+          const logs = ex
+            ? s.logs.map((l) => (l === ex ? { ...l, is_completed: desired } : l))
+            : [...s.logs, { id: newId(), item_id: itemId, date, is_completed: desired }];
           return { ...s, logs };
         },
-        () => db.toggle(itemId, date, newVal),
+        () => db.toggle(itemId, date, desired),
         "Couldn't save your check-in.",
       );
     },

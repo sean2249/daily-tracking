@@ -124,7 +124,7 @@ export function OverflowMenu({ items, onClose }) {
     const h = () => onClose();
     const t = setTimeout(() => document.addEventListener('click', h), 0);
     return () => { clearTimeout(t); document.removeEventListener('click', h); };
-  }, []);
+  }, [onClose]);
   return (
     <div className="menu" style={{ top: 92, right: 16 }} onClick={(e) => e.stopPropagation()}>
       {items.map((it, i) => it.sep

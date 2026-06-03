@@ -38,8 +38,9 @@ function ItemCheckRow({ item, done, streak, feel, flashId, onToggle, onOpen }) {
   return (
     <div className={'item-row' + (flashId === item.id ? ' flash' : '')}>
       <div className={'checkbox ' + feel + (done ? ' checked' : '')}
-        role="checkbox" aria-checked={done} aria-label={item.name}
-        onClick={onToggle}>
+        role="checkbox" aria-checked={done} aria-label={item.name} tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggle(); } }}>
         {done && <CheckIcon size={17} />}
       </div>
       <div className={'item-name' + (done ? ' done' : '')} onClick={onOpen}>{item.name}</div>
@@ -138,8 +139,8 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
 
   function onToggleWithToast(id, d) {
     const wasDone = isDone(logIdx, id, d);
-    api.toggle(id, d);
-    toast.show(wasDone ? 'Check-in removed.' : 'Saved.', () => api.toggle(id, d));
+    api.toggle(id, d, !wasDone);
+    toast.show(wasDone ? 'Check-in removed.' : 'Saved.', () => api.toggle(id, d, wasDone));
   }
 
   function DayRow({ date }) {
@@ -164,10 +165,16 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
       pctEl = <span className="day-pct">{comp.pct}%</span>;
     }
 
+    const toggleExpand = () => { if (canExpand) { const n = new Set(expanded); n.has(date) ? n.delete(date) : n.add(date); setExpanded(n); } };
+
     return (
       <div className={(layout === 'cards' ? 'day-card' : '') + (isToday ? ' is-today' : '')} style={layout === 'minimal' ? { borderBottom: '1px solid var(--border)' } : {}}>
         <div className={'day-head' + (canExpand ? '' : ' readonly')}
-          onClick={() => { if (canExpand) { const n = new Set(expanded); n.has(date) ? n.delete(date) : n.add(date); setExpanded(n); } }}>
+          role={canExpand ? 'button' : undefined}
+          tabIndex={canExpand ? 0 : undefined}
+          aria-expanded={canExpand ? open : undefined}
+          onClick={toggleExpand}
+          onKeyDown={canExpand ? (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleExpand(); } } : undefined}>
           {cellEl}
           <div className="day-label">
             <div className="d-title">{fmtMonDay(date)}</div>
