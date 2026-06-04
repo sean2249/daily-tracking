@@ -31,19 +31,22 @@ export function relLabel(s, today) {
 }
 
 // ---------- completion color scales ----------
+// 7 steps each: index 0 = empty, 1..5 = partial bands, 6 = full (100%).
 export const SCALES = {
-  green: { name: 'GitHub green', c: ['#EBEDF0', '#9BE9A8', '#40C463', '#30A14E', '#216E39'] },
-  ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#BBD6F2', '#74A9E8', '#3B6FD4', '#1B3F8F'] },
-  plum: { name: 'Plum', c: ['#EFEAF2', '#D9BCE6', '#B97FCE', '#9447B0', '#5E2178'] },
+  green: { name: 'GitHub green', c: ['#EBEDF0', '#C6F0D0', '#9BE9A8', '#57D27C', '#30A14E', '#1E7E3C', '#0E4429'] },
+  ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#CFE2F7', '#A8CBEE', '#74A9E8', '#3B6FD4', '#27509E', '#16306B'] },
+  plum: { name: 'Plum', c: ['#EFEAF2', '#E0CCEA', '#C9A3DC', '#B97FCE', '#9447B0', '#6E2A8C', '#451058'] },
 };
 
-// pct 0..100 -> 0..4 index into a completion scale
+// pct 0..100 -> 0..6 index into a completion scale
 export function bucket(pct) {
   if (pct === 0) return 0;
-  if (pct < 34) return 1;
-  if (pct < 67) return 2;
-  if (pct < 100) return 3;
-  return 4;
+  if (pct < 20) return 1;
+  if (pct < 40) return 2;
+  if (pct < 60) return 3;
+  if (pct < 80) return 4;
+  if (pct < 100) return 5;
+  return 6;
 }
 
 // ---------- item time-window ----------

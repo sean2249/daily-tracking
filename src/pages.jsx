@@ -255,7 +255,7 @@ export function CalendarPage({ state, t, onBack, onOpenItem, dataState, onRetry 
     const comp = dayCompletion(state.items, logIdx, ds);
     if (comp.denom === 0) return { kind: 'empty' };
     const b = bucket(comp.pct);
-    return { kind: 'fill', fill: colors[b], dark: b >= 3, title: comp.pct + '%' };
+    return { kind: 'fill', fill: colors[b], dark: b >= 4, title: comp.pct + '%' };
   }
 
   return (
@@ -349,7 +349,7 @@ export function DetailPage({ itemId, state, t, onBack, requestEdit, requestArchi
     if (ds > today) return { kind: 'empty' };
     if (ds === today && !archived) return { kind: 'today' };
     const done = isDone(logIdx, item.id, ds);
-    return { kind: 'fill', fill: done ? colors[4] : colors[0], dark: done, title: done ? 'Done' : 'Missed' };
+    return { kind: 'fill', fill: done ? colors[colors.length - 1] : colors[0], dark: done, title: done ? 'Done' : 'Missed' };
   }
 
   const heroMode = t.detailHero; // 'big' | 'ring'

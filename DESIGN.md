@@ -46,10 +46,10 @@ and the heatmap.
 
 ## 4. Completion scale (`bucket` → color)
 
-5 buckets: `0` / `<34` / `<67` / `<100` / `100`. Shipping palette is **GitHub
-green** (`#EBEDF0 #9BE9A8 #40C463 #30A14E #216E39`); accent = step 3 (`#30A14E`).
-Ocean (colorblind-safe) and Plum scales exist in `SCALES` (`data.jsx`) but are not
-exposed via UI.
+7 buckets: `0` / `<20` / `<40` / `<60` / `<80` / `<100` / `100`. Shipping palette
+is **GitHub green** (`#EBEDF0 #C6F0D0 #9BE9A8 #57D27C #30A14E #1E7E3C #0E4429`);
+accent = step 4 (`#30A14E`). Ocean (colorblind-safe) and Plum scales also have 7
+steps in `SCALES` (`data.jsx`) but are not exposed via UI.
 
 ## 5. Type & tokens
 

@@ -56,19 +56,31 @@ describe('date helpers', () => {
 });
 
 describe('SCALES / bucket', () => {
-  it('green scale has 5 steps', () => {
-    expect(SCALES.green.c).toHaveLength(5);
-    expect(SCALES.ocean.c).toHaveLength(5);
+  it('every scale has at least 7 steps', () => {
+    for (const key of Object.keys(SCALES)) {
+      expect(SCALES[key].c.length).toBeGreaterThanOrEqual(7);
+    }
   });
-  it('bucket boundaries 0 / <34 / <67 / <100 / 100', () => {
+  it('bucket maps pct into 0..6 within scale bounds', () => {
+    for (let pct = 0; pct <= 100; pct++) {
+      const b = bucket(pct);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThan(SCALES.green.c.length);
+    }
+  });
+  it('bucket boundaries 0 / <20 / <40 / <60 / <80 / <100 / 100', () => {
     expect(bucket(0)).toBe(0);
     expect(bucket(1)).toBe(1);
-    expect(bucket(33)).toBe(1);
-    expect(bucket(34)).toBe(2);
-    expect(bucket(66)).toBe(2);
-    expect(bucket(67)).toBe(3);
-    expect(bucket(99)).toBe(3);
-    expect(bucket(100)).toBe(4);
+    expect(bucket(19)).toBe(1);
+    expect(bucket(20)).toBe(2);
+    expect(bucket(39)).toBe(2);
+    expect(bucket(40)).toBe(3);
+    expect(bucket(59)).toBe(3);
+    expect(bucket(60)).toBe(4);
+    expect(bucket(79)).toBe(4);
+    expect(bucket(80)).toBe(5);
+    expect(bucket(99)).toBe(5);
+    expect(bucket(100)).toBe(6);
   });
 });
 
