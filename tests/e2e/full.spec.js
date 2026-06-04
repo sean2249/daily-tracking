@@ -107,5 +107,38 @@ test.describe('full live E2E (real Supabase)', () => {
     }));
     expect(m.sw, 'horizontal overflow').toBeLessThanOrEqual(m.iw + 1);
     expect(m.sh, 'document scrolls vertically').toBeLessThanOrEqual(m.ih + 1);
+
+    // Scroll regression guard: the inner .scroll list must be the scroll
+    // container — i.e. .screen stays clamped to the .app-shell height instead
+    // of growing with its content (which would let the overflow-hidden shell
+    // clip the bottom of a tall expanded-Today list and make it unreachable).
+    // Assert the structural anchors exist first so a markup/render change fails
+    // with a clear message instead of a cryptic TypeError inside page.evaluate.
+    await expect(page.locator('.app-shell')).toBeVisible();
+    await expect(page.locator('.screen')).toBeVisible();
+    await expect(page.locator('.scroll')).toBeVisible();
+    const s = await page.evaluate(() => {
+      const shell = document.querySelector('.app-shell');
+      const screen = document.querySelector('.screen');
+      const scroll = document.querySelector('.scroll');
+      return {
+        shellH: Math.round(shell.getBoundingClientRect().height),
+        screenH: Math.round(screen.getBoundingClientRect().height),
+        scrollClient: scroll.clientHeight,
+        scrollContent: scroll.scrollHeight,
+      };
+    });
+    // .screen must not exceed the shell (the clipping container).
+    expect(s.screenH, '.screen overflows the app shell').toBeLessThanOrEqual(s.shellH + 1);
+    // When the list is taller than its viewport, .scroll itself must scroll.
+    if (s.scrollContent > s.scrollClient + 1) {
+      const maxScroll = s.scrollContent - s.scrollClient;
+      const reached = await page.evaluate(() => {
+        const el = document.querySelector('.scroll');
+        el.scrollTop = el.scrollHeight;
+        return el.scrollTop;
+      });
+      expect(reached, '.scroll did not scroll to the bottom').toBeGreaterThanOrEqual(maxScroll - 1);
+    }
   });
 });
