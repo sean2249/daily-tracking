@@ -55,6 +55,17 @@ test.describe('full live E2E (real Supabase)', () => {
     await box.click();
     await expect(box).toBeChecked();
 
+    // ── perfect-day indicator: checking every item shows "Done" + sparkle cell ──
+    const prinBox = page.getByRole('checkbox', { name: PRIN });
+    await prinBox.click();
+    await expect(prinBox).toBeChecked();
+    await expect(page.getByText('Done', { exact: true })).toBeVisible();
+    await expect(page.locator('.cell.full')).toBeVisible();
+    // back to a partial day so the rest of the flow is unaffected
+    await prinBox.click();
+    await expect(prinBox).not.toBeChecked();
+    await expect(page.locator('.cell.full')).toHaveCount(0);
+
     // ── open detail, then archive ────────────────────────────
     await page.getByText(HABIT).click();
     await expect(page.getByText('Current streak')).toBeVisible();

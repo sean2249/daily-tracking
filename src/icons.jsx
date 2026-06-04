@@ -72,6 +72,13 @@ export const ComboIcon = (p) => (
   <Svg {...p} sw={p.sw || 2}><circle cx="12" cy="12" r="8" /><path d="M9 12l2 2 4-4.5" /></Svg>
 );
 
+// perfect-day mark — a four-point sparkle for a 100% (all-checked) day
+export const SparkIcon = (p) => (
+  <Svg {...p} fill="currentColor" sw={0}>
+    <path d="M12 2.5c.4 3.6 1.4 6.6 2.9 8.1S18.4 12.1 21.5 12.5c-3.1.4-6.1 1.4-7.6 2.9S12.4 20.4 12 23.5c-.4-3.1-1.4-6.6-2.9-8.1S5.6 12.9 2.5 12.5c3.1-.4 6.1-1.4 7.6-2.9S11.6 6.1 12 2.5Z" />
+  </Svg>
+);
+
 // error / connection-problem mark — alert triangle
 export const AlertIcon = (p) => (
   <Svg {...p}><path d="M12 4.5l8.5 14.5H3.5L12 4.5Z" /><path d="M12 10v4" /><path d="M12 17.2v.1" /></Svg>

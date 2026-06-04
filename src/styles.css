@@ -166,6 +166,19 @@ body { background: #e7e7ee; }
   border: 2px solid var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+/* perfect day — every tracked item checked: special sparkle indicator */
+.cell.full {
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.cell.full svg { color: #fff; }
+.cell.today.full {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: fullpop .5s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes fullpop { 0%{ transform: scale(.7); } 55%{ transform: scale(1.18); } 100%{ transform: scale(1); } }
 .day-pct { font-family: var(--mono); font-size: 13px; color: var(--text-2); min-width: 38px; text-align: right; }
 .day-pct.inprog { color: var(--accent); }
 
