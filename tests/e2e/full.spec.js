@@ -112,6 +112,11 @@ test.describe('full live E2E (real Supabase)', () => {
     // container — i.e. .screen stays clamped to the .app-shell height instead
     // of growing with its content (which would let the overflow-hidden shell
     // clip the bottom of a tall expanded-Today list and make it unreachable).
+    // Assert the structural anchors exist first so a markup/render change fails
+    // with a clear message instead of a cryptic TypeError inside page.evaluate.
+    await expect(page.locator('.app-shell')).toBeVisible();
+    await expect(page.locator('.screen')).toBeVisible();
+    await expect(page.locator('.scroll')).toBeVisible();
     const s = await page.evaluate(() => {
       const shell = document.querySelector('.app-shell');
       const screen = document.querySelector('.screen');
