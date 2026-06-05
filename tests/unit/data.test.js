@@ -56,19 +56,36 @@ describe('date helpers', () => {
 });
 
 describe('SCALES / bucket', () => {
-  it('green scale has 5 steps', () => {
-    expect(SCALES.green.c).toHaveLength(5);
-    expect(SCALES.ocean.c).toHaveLength(5);
+  it('every scale meets the 7+ gradation bar and covers every bucket', () => {
+    for (const key of Object.keys(SCALES)) {
+      // product requirement: at least 7 gradations
+      expect(SCALES[key].c.length).toBeGreaterThanOrEqual(7);
+      // and long enough that the top bucket never indexes out of bounds
+      expect(SCALES[key].c.length).toBeGreaterThan(bucket(100));
+    }
   });
-  it('bucket boundaries 0 / <34 / <67 / <100 / 100', () => {
+  it('bucket maps pct into 0..7 within scale bounds', () => {
+    for (let pct = 0; pct <= 100; pct++) {
+      const b = bucket(pct);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThan(SCALES.green.c.length);
+    }
+  });
+  it('bucket boundaries 0 / <17 / <34 / <50 / <67 / <84 / <100 / 100', () => {
     expect(bucket(0)).toBe(0);
     expect(bucket(1)).toBe(1);
-    expect(bucket(33)).toBe(1);
-    expect(bucket(34)).toBe(2);
-    expect(bucket(66)).toBe(2);
-    expect(bucket(67)).toBe(3);
-    expect(bucket(99)).toBe(3);
-    expect(bucket(100)).toBe(4);
+    expect(bucket(16)).toBe(1);
+    expect(bucket(17)).toBe(2);
+    expect(bucket(33)).toBe(2);
+    expect(bucket(34)).toBe(3);
+    expect(bucket(49)).toBe(3);
+    expect(bucket(50)).toBe(4);
+    expect(bucket(66)).toBe(4);
+    expect(bucket(67)).toBe(5);
+    expect(bucket(83)).toBe(5);
+    expect(bucket(84)).toBe(6);
+    expect(bucket(99)).toBe(6);
+    expect(bucket(100)).toBe(7);
   });
 });
 
