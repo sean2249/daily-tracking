@@ -56,10 +56,12 @@ describe('date helpers', () => {
 });
 
 describe('SCALES / bucket', () => {
-  it('every scale has 8 steps (at least 7 gradations)', () => {
+  it('every scale meets the 7+ gradation bar and covers every bucket', () => {
     for (const key of Object.keys(SCALES)) {
+      // product requirement: at least 7 gradations
       expect(SCALES[key].c.length).toBeGreaterThanOrEqual(7);
-      expect(SCALES[key].c).toHaveLength(8);
+      // and long enough that the top bucket never indexes out of bounds
+      expect(SCALES[key].c.length).toBeGreaterThan(bucket(100));
     }
   });
   it('bucket maps pct into 0..7 within scale bounds', () => {
