@@ -56,31 +56,20 @@ describe('date helpers', () => {
 });
 
 describe('SCALES / bucket', () => {
-  it('every scale has at least 7 steps', () => {
+  it('every scale has 8 steps (0..7 completed items)', () => {
     for (const key of Object.keys(SCALES)) {
-      expect(SCALES[key].c.length).toBeGreaterThanOrEqual(7);
+      expect(SCALES[key].c).toHaveLength(8);
     }
   });
-  it('bucket maps pct into 0..6 within scale bounds', () => {
-    for (let pct = 0; pct <= 100; pct++) {
-      const b = bucket(pct);
-      expect(b).toBeGreaterThanOrEqual(0);
-      expect(b).toBeLessThan(SCALES.green.c.length);
-    }
+  it('bucket maps completed-item count to its own index 0..7', () => {
+    for (let n = 0; n <= 7; n++) expect(bucket(n)).toBe(n);
   });
-  it('bucket boundaries 0 / <20 / <40 / <60 / <80 / <100 / 100', () => {
+  it('bucket clamps: <=0 -> 0, >7 -> 7 (within scale bounds)', () => {
     expect(bucket(0)).toBe(0);
-    expect(bucket(1)).toBe(1);
-    expect(bucket(19)).toBe(1);
-    expect(bucket(20)).toBe(2);
-    expect(bucket(39)).toBe(2);
-    expect(bucket(40)).toBe(3);
-    expect(bucket(59)).toBe(3);
-    expect(bucket(60)).toBe(4);
-    expect(bucket(79)).toBe(4);
-    expect(bucket(80)).toBe(5);
-    expect(bucket(99)).toBe(5);
-    expect(bucket(100)).toBe(6);
+    expect(bucket(-3)).toBe(0);
+    expect(bucket(7)).toBe(7);
+    expect(bucket(99)).toBe(7);
+    expect(bucket(99)).toBeLessThan(SCALES.green.c.length);
   });
 });
 

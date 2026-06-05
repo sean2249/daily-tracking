@@ -31,22 +31,20 @@ export function relLabel(s, today) {
 }
 
 // ---------- completion color scales ----------
-// 7 steps each: index 0 = empty, 1..5 = partial bands, 6 = full (100%).
+// 8 steps each: index = number of completed items that day (0..7).
+// The app caps active items at 7, so a day has 0..7 completions; index 0 =
+// none done (empty), index 7 = all seven held.
 export const SCALES = {
-  green: { name: 'GitHub green', c: ['#EBEDF0', '#C6F0D0', '#9BE9A8', '#57D27C', '#30A14E', '#1E7E3C', '#0E4429'] },
-  ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#CFE2F7', '#A8CBEE', '#74A9E8', '#3B6FD4', '#27509E', '#16306B'] },
-  plum: { name: 'Plum', c: ['#EFEAF2', '#E0CCEA', '#C9A3DC', '#B97FCE', '#9447B0', '#6E2A8C', '#451058'] },
+  green: { name: 'GitHub green', c: ['#EBEDF0', '#C6F0D0', '#9BE9A8', '#6FDD8B', '#40C463', '#30A14E', '#1E7E3C', '#0E4429'] },
+  ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#D8E7F8', '#B9D3F1', '#93BBEA', '#6098E0', '#3B6FD4', '#27509E', '#16306B'] },
+  plum: { name: 'Plum', c: ['#EFEAF2', '#E6D6EE', '#D2B0E0', '#BE8AD2', '#A95FC2', '#9447B0', '#6E2A8C', '#451058'] },
 };
 
-// pct 0..100 -> 0..6 index into a completion scale
-export function bucket(pct) {
-  if (pct === 0) return 0;
-  if (pct < 20) return 1;
-  if (pct < 40) return 2;
-  if (pct < 60) return 3;
-  if (pct < 80) return 4;
-  if (pct < 100) return 5;
-  return 6;
+// MAX_ITEMS-aware: completed-item count -> index into a completion scale.
+// Clamped to [0, 7] (8 colors), so 7+ completions all read as the darkest step.
+export function bucket(num) {
+  if (num <= 0) return 0;
+  return Math.min(num, 7);
 }
 
 // ---------- item time-window ----------

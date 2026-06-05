@@ -46,10 +46,12 @@ and the heatmap.
 
 ## 4. Completion scale (`bucket` → color)
 
-7 buckets: `0` / `<20` / `<40` / `<60` / `<80` / `<100` / `100`. Shipping palette
-is **GitHub green** (`#EBEDF0 #C6F0D0 #9BE9A8 #57D27C #30A14E #1E7E3C #0E4429`);
-accent = step 4 (`#30A14E`). Ocean (colorblind-safe) and Plum scales also have 7
-steps in `SCALES` (`data.jsx`) but are not exposed via UI.
+8 buckets, indexed by the **number of completed items** that day (`0..7`, since
+the app caps active items at 7): step 0 = none held, step 7 = all seven. Shipping
+palette is **GitHub green**
+(`#EBEDF0 #C6F0D0 #9BE9A8 #6FDD8B #40C463 #30A14E #1E7E3C #0E4429`); accent =
+step 5 (`#30A14E`). Ocean (colorblind-safe) and Plum scales also have 8 steps in
+`SCALES` (`data.jsx`) but are not exposed via UI.
 
 ## 5. Type & tokens
 
