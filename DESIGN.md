@@ -46,8 +46,8 @@ and the heatmap.
 
 ## 4. Completion scale (`bucket` → color)
 
-8 buckets, indexed by the **number of completed items** that day (`0..7`, since
-the app caps active items at 7): step 0 = none held, step 7 = all seven. Shipping
+8 buckets by **completion percentage** (not raw count — the denominator varies
+per day): `0` / `<17` / `<34` / `<50` / `<67` / `<84` / `<100` / `100`. Shipping
 palette is **GitHub green**
 (`#EBEDF0 #C6F0D0 #9BE9A8 #6FDD8B #40C463 #30A14E #1E7E3C #0E4429`); accent =
 step 5 (`#30A14E`). Ocean (colorblind-safe) and Plum scales also have 8 steps in

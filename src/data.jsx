@@ -31,20 +31,25 @@ export function relLabel(s, today) {
 }
 
 // ---------- completion color scales ----------
-// 8 steps each: index = number of completed items that day (0..7).
-// The app caps active items at 7, so a day has 0..7 completions; index 0 =
-// none done (empty), index 7 = all seven held.
+// 8 steps each: index 0 = empty (0%), 1..6 = partial bands, 7 = full (100%).
 export const SCALES = {
   green: { name: 'GitHub green', c: ['#EBEDF0', '#C6F0D0', '#9BE9A8', '#6FDD8B', '#40C463', '#30A14E', '#1E7E3C', '#0E4429'] },
   ocean: { name: 'Ocean (colorblind-safe)', c: ['#EBEDF0', '#D8E7F8', '#B9D3F1', '#93BBEA', '#6098E0', '#3B6FD4', '#27509E', '#16306B'] },
   plum: { name: 'Plum', c: ['#EFEAF2', '#E6D6EE', '#D2B0E0', '#BE8AD2', '#A95FC2', '#9447B0', '#6E2A8C', '#451058'] },
 };
 
-// MAX_ITEMS-aware: completed-item count -> index into a completion scale.
-// Clamped to [0, 7] (8 colors), so 7+ completions all read as the darkest step.
-export function bucket(num) {
-  if (num <= 0) return 0;
-  return Math.min(num, 7);
+// completion percentage 0..100 -> 0..7 index into a completion scale.
+// Percentage (not raw count) so a day's color reflects how much of *that
+// day's* tracked items were held, whatever the denominator is.
+export function bucket(pct) {
+  if (pct === 0) return 0;
+  if (pct < 17) return 1;
+  if (pct < 34) return 2;
+  if (pct < 50) return 3;
+  if (pct < 67) return 4;
+  if (pct < 84) return 5;
+  if (pct < 100) return 6;
+  return 7;
 }
 
 // ---------- item time-window ----------

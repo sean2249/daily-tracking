@@ -152,7 +152,7 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
 
     let cellEl, pctEl;
     if (isToday) {
-      const fill = comp.num > 0 ? colors[bucket(comp.num)] : null;
+      const fill = comp.num > 0 ? colors[bucket(comp.pct)] : null;
       cellEl = <div className="cell today" style={fill ? { background: fill } : {}} />;
       const allDone = comp.num === comp.denom;
       pctEl = <span className="day-pct inprog">{allDone ? 'Done' : '' + comp.num + '/' + comp.denom}</span>;
@@ -160,7 +160,7 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
       cellEl = <div className="cell" style={{ border: '1.5px dashed var(--border-strong)', background: 'transparent' }} />;
       pctEl = <span className="day-pct" style={{ color: 'var(--text-3)' }}>—</span>;
     } else {
-      cellEl = <div className="cell" style={{ background: colors[bucket(comp.num)] }} />;
+      cellEl = <div className="cell" style={{ background: colors[bucket(comp.pct)] }} />;
       pctEl = <span className="day-pct">{comp.pct}%</span>;
     }
 
@@ -254,8 +254,8 @@ export function CalendarPage({ state, t, onBack, onOpenItem, dataState, onRetry 
     if (ds === today) return { kind: 'today' };
     const comp = dayCompletion(state.items, logIdx, ds);
     if (comp.denom === 0) return { kind: 'empty' };
-    const b = bucket(comp.num);
-    return { kind: 'fill', fill: colors[b], dark: b >= 5, title: comp.num + '/' + comp.denom };
+    const b = bucket(comp.pct);
+    return { kind: 'fill', fill: colors[b], dark: b >= 5, title: comp.pct + '%' };
   }
 
   return (
