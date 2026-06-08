@@ -1,14 +1,14 @@
 // pages.jsx — TodayBoard, CalendarPage, DetailPage.
 import React from 'react';
 import {
-  todayYMD, addDays, makeLogIndex, isDone, activeItemsOn, dayCompletion,
+  todayYMD, addDays, makeLogIndex, isDone, activeItemsOn, dayCompletion, isFullDay,
   bucket, SCALES, fmtMonDay, fmtSlash, relLabel, earliestStart, fullComboStreak,
   itemCurrentStreak, itemLongestStreak, itemCompletion, itemTotalDone,
 } from './data.jsx';
 import {
   ChartIcon, BackIcon, ChevronIcon, ComboIcon, HabitIcon, PrincipleIcon, AddIcon,
   EmptyArt, StreakIcon, CheckIcon, MoreIcon, EditIcon, ArchiveIcon, DeleteIcon,
-  RestoreIcon, SearchIcon,
+  RestoreIcon, SearchIcon, SparkIcon,
 } from './icons.jsx';
 import {
   MonthsView, ErrorState, StateMessage, OverflowMenu,
@@ -150,17 +150,29 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
     const hasItems = items.length > 0;
     const canExpand = hasItems;
 
+    const full = isFullDay(items, logIdx, date);
+
     let cellEl, pctEl;
     if (isToday) {
-      const fill = comp.num > 0 ? colors[bucket(comp.pct)] : null;
-      cellEl = <div className="cell today" style={fill ? { background: fill } : {}} />;
-      const allDone = comp.num === comp.denom;
-      pctEl = <span className="day-pct inprog">{allDone ? 'Done' : '' + comp.num + '/' + comp.denom}</span>;
+      // On a perfect day the `.cell.today.full` CSS supplies the accent
+      // background, so skip the inline fill (it would otherwise win and
+      // override that rule); only set it for partial progress.
+      const fill = !full && comp.num > 0 ? colors[bucket(comp.pct)] : null;
+      cellEl = (
+        <div className={'cell today' + (full ? ' full' : '')} style={fill ? { background: fill } : {}}>
+          {full && <SparkIcon size={13} />}
+        </div>
+      );
+      pctEl = <span className="day-pct inprog">{full ? 'Done' : '' + comp.num + '/' + comp.denom}</span>;
     } else if (!hasItems) {
       cellEl = <div className="cell" style={{ border: '1.5px dashed var(--border-strong)', background: 'transparent' }} />;
       pctEl = <span className="day-pct" style={{ color: 'var(--text-3)' }}>—</span>;
     } else {
-      cellEl = <div className="cell" style={{ background: colors[bucket(comp.pct)] }} />;
+      cellEl = (
+        <div className={'cell' + (full ? ' full' : '')} style={{ background: colors[bucket(comp.pct)] }}>
+          {full && <SparkIcon size={13} />}
+        </div>
+      );
       pctEl = <span className="day-pct">{comp.pct}%</span>;
     }
 

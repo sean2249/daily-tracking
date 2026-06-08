@@ -80,6 +80,13 @@ export function dayCompletion(items, logIdx, s) {
   return { denom: act.length, num, pct: Math.round((num / act.length) * 100) };
 }
 
+// a day is "full" when it tracks at least one item and every one is completed
+// (100%). Pure helper so the Today board can flag a perfect-day indicator.
+export function isFullDay(items, logIdx, s) {
+  const c = dayCompletion(items, logIdx, s);
+  return c.denom > 0 && c.num === c.denom;
+}
+
 // earliest start among all non-deleted items (lower bound for streak walks)
 export function earliestStart(items) {
   let e = null;

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   pad, ymd, parseYMD, todayYMD, addDays, dow, relLabel, fmtMonDay, fmtSlash,
   DOW_SHORT, MON_SHORT, SCALES, bucket,
-  itemActiveOn, activeItemsOn, makeLogIndex, isDone, dayCompletion, earliestStart,
+  itemActiveOn, activeItemsOn, makeLogIndex, isDone, dayCompletion, isFullDay, earliestStart,
   itemCurrentStreak, itemLongestStreak, itemCompletion, itemTotalDone, fullComboStreak,
 } from '../../src/data.jsx';
 
@@ -127,6 +127,16 @@ describe('makeLogIndex / isDone / dayCompletion', () => {
   it('dayCompletion: no tracked items -> denom 0, pct null', () => {
     const future = item({ id: 'f', start_date: '2026-12-01' });
     expect(dayCompletion([future], makeLogIndex([]), TODAY)).toEqual({ denom: 0, num: 0, pct: null });
+  });
+  it('isFullDay: true only when every tracked item is checked', () => {
+    const both = idxOf({ item_id: 'a', date: TODAY }, { item_id: 'b', date: TODAY });
+    expect(isFullDay([A, B], both, TODAY)).toBe(true);
+    const one = idxOf({ item_id: 'a', date: TODAY });
+    expect(isFullDay([A, B], one, TODAY)).toBe(false);
+  });
+  it('isFullDay: false when no items are tracked that day', () => {
+    const future = item({ id: 'f', start_date: '2026-12-01' });
+    expect(isFullDay([future], makeLogIndex([]), TODAY)).toBe(false);
   });
 });
 
