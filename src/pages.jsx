@@ -154,7 +154,10 @@ export function TodayBoard({ state, api, t, expanded, setExpanded, flashId, onOp
 
     let cellEl, pctEl;
     if (isToday) {
-      const fill = comp.num > 0 ? colors[bucket(comp.pct)] : null;
+      // On a perfect day the `.cell.today.full` CSS supplies the accent
+      // background, so skip the inline fill (it would otherwise win and
+      // override that rule); only set it for partial progress.
+      const fill = !full && comp.num > 0 ? colors[bucket(comp.pct)] : null;
       cellEl = (
         <div className={'cell today' + (full ? ' full' : '')} style={fill ? { background: fill } : {}}>
           {full && <SparkIcon size={13} />}

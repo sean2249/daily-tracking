@@ -56,15 +56,18 @@ test.describe('full live E2E (real Supabase)', () => {
     await expect(box).toBeChecked();
 
     // ── perfect-day indicator: checking every item shows "Done" + sparkle cell ──
+    // Scope to Today's row (.is-today) so a pre-existing full day in the shared
+    // E2E account's last 7 days can't satisfy/break these assertions.
+    const todayRow = page.locator('.is-today');
     const prinBox = page.getByRole('checkbox', { name: PRIN });
     await prinBox.click();
     await expect(prinBox).toBeChecked();
-    await expect(page.getByText('Done', { exact: true })).toBeVisible();
-    await expect(page.locator('.cell.full')).toBeVisible();
+    await expect(todayRow.getByText('Done', { exact: true })).toBeVisible();
+    await expect(todayRow.locator('.cell.full')).toBeVisible();
     // back to a partial day so the rest of the flow is unaffected
     await prinBox.click();
     await expect(prinBox).not.toBeChecked();
-    await expect(page.locator('.cell.full')).toHaveCount(0);
+    await expect(todayRow.locator('.cell.full')).toHaveCount(0);
 
     // ── open detail, then archive ────────────────────────────
     await page.getByText(HABIT).click();
