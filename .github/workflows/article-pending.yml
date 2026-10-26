@@ -1,0 +1,15 @@
+# Caller for the shared article-pending workflow. Written by issue-workflow-setup.
+# <skills-repo> is the <owner>/<repo> that hosts the reusable workflows; <tag> is its latest release tag (v1, v2, …).
+name: article-pending
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  article-pending:
+    uses: sean2249/skills/.github/workflows/article-pending.yml@v3
