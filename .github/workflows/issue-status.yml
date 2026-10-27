@@ -1,0 +1,15 @@
+# Caller for the shared issue-status workflow. Written by issue-workflow-setup.
+# <skills-repo> is the <owner>/<repo> that hosts the reusable workflows; <tag> is its latest release tag (v1, v2, …).
+# The owner's new issues get `status: raw`; anyone else's get `external` and stay out of the flow; bots are skipped.
+name: issue-status
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  issue-status:
+    uses: sean2249/skills/.github/workflows/issue-status.yml@v3
